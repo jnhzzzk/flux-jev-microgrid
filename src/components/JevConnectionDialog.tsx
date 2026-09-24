@@ -58,7 +58,7 @@ function formatExpiry(value?: string): string {
 
 /**
  * A write-only BYOK field. The API key lives only in the uncontrolled input
- * long enough to create an opaque server session, then the DOM value is erased.
+ * long enough to create an opaque encrypted server session, then the DOM value is erased.
  */
 export function JevConnectionDialog({
   open,
@@ -169,7 +169,7 @@ export function JevConnectionDialog({
       <div className="jev-connection-dialog__status-mark" aria-hidden="true"><CheckCircle2 size={22} /></div>
       <div>
         <strong>Jev 已临时连接</strong>
-        <p>服务端仅在进程内保管本次会话密钥，到 {formatExpiry(connection?.expiresAt)} 自动清除。</p>
+        <p>服务端仅以加密短时凭证处理本次连接，到 {formatExpiry(connection?.expiresAt)} 自动失效。</p>
       </div>
       <dl aria-label="本次 Jev 会话状态">
         <div><dt>会话</dt><dd>临时</dd></div>
@@ -184,7 +184,7 @@ export function JevConnectionDialog({
         onClick={handleDisconnect}
       >
         {isLoading ? <LoaderCircle size={17} className="spinner" aria-hidden="true" /> : <Unplug size={17} />}
-        <span>{isLoading ? "正在清除" : "移除本次会话密钥"}</span>
+        <span>{isLoading ? "正在清除" : "移除此设备的会话凭证"}</span>
       </button>
     </div>
   );
@@ -223,7 +223,7 @@ export function JevConnectionDialog({
         </span>
       </label>
       <p id={helperId} className="jev-connection-dialog__helper" data-tone={displayedError ? "error" : "default"} role={displayedError ? "alert" : undefined}>
-        {displayedError ?? "粘贴后将立即清空输入框；关闭连接、闲置或到期后服务端清除密钥。"}
+        {displayedError ?? "粘贴后将立即清空输入框；关闭连接会清除本机凭证，闲置或到期后服务端拒绝该临时连接。"}
       </p>
       <footer className="jev-connection-dialog__actions">
         <span><TimerReset size={16} aria-hidden="true" />最长保留 15 分钟</span>

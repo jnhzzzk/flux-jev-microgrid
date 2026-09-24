@@ -10,6 +10,6 @@
     "rootDir": ".",
     "types": ["node"]
   },
-  "include": ["server/**/*.ts", "shared/**/*.ts"],
+  "include": ["api/**/*.ts", "server/**/*.ts", "shared/**/*.ts"],
   "exclude": ["server/**/*.test.ts"]
 }

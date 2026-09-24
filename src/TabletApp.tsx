@@ -106,10 +106,12 @@ async function requestJson<T>(
     method = "GET",
     payload,
     sessionToken,
+    onSessionTokenRenewed,
   }: {
     method?: "GET" | "POST" | "DELETE";
     payload?: unknown;
     sessionToken?: string | null;
+    onSessionTokenRenewed?: (token: string) => void;
   } = {},
 ): Promise<T> {
   const headers = new Headers();
@@ -130,6 +132,8 @@ async function requestJson<T>(
     const code = "code" in json && typeof json.code === "string" ? json.code : undefined;
     throw new ApiRequestError(message, response.status, code);
   }
+  const renewedSessionToken = response.headers.get("X-Jev-Session-Renewed");
+  if (renewedSessionToken) onSessionTokenRenewed?.(renewedSessionToken);
   return json as T;
 }
 
@@ -500,6 +504,13 @@ export default function TabletApp() {
     setJevConnection(null);
   }
 
+  function acceptRenewedSessionToken(previousToken: string | null | undefined, renewedToken: string) {
+    // Concurrent requests must never overwrite a more recent transient token.
+    if (previousToken && connectionTokenRef.current === previousToken) {
+      connectionTokenRef.current = renewedToken;
+    }
+  }
+
   function resetDecisionPresentation() {
     setResult(null);
     setMeasurement(null);
@@ -536,10 +547,12 @@ export default function TabletApp() {
 
       step = 2;
       setPhase("deciding");
+      const sessionToken = connectionTokenRef.current;
       const dispatch = await requestJson<DispatchResponse>("/api/dispatch/forecast", {
         method: "POST",
         payload: forecastRequest,
-        sessionToken: connectionTokenRef.current,
+        sessionToken,
+        onSessionTokenRenewed: (renewedToken) => acceptRenewedSessionToken(sessionToken, renewedToken),
       });
       setResult(dispatch);
       setDirty(false);
@@ -631,7 +644,10 @@ export default function TabletApp() {
   }
 
   async function refreshServiceStatus(sessionToken = connectionTokenRef.current) {
-    const nextStatus = await requestJson<ServiceStatus>("/api/status", { sessionToken });
+    const nextStatus = await requestJson<ServiceStatus>("/api/status", {
+      sessionToken,
+      onSessionTokenRenewed: (renewedToken) => acceptRenewedSessionToken(sessionToken, renewedToken),
+    });
     setStatus(nextStatus);
     setStatusChecked(true);
     setStatusError(null);
@@ -663,7 +679,7 @@ export default function TabletApp() {
       });
       await refreshServiceStatus(receipt.connectionToken);
       resetDecisionPresentation();
-      if (connectionTokenRef.current === receipt.connectionToken) {
+      if (connectionTokenRef.current) {
         setConnectionDialogOpen(false);
       }
     } catch (caught) {

@@ -6,7 +6,7 @@
 
 ## 运行
 
-要求 Node.js 20 或更高版本，并在服务端环境中配置 `TYPESAFE_API_KEY`。
+要求 Node.js 20 或更高版本。默认通过界面的临时 BYOK 连接使用 Jev；只有启用受管私有部署时才需要在服务端配置 `TYPESAFE_API_KEY`。
 
 ```powershell
 npm install
@@ -34,7 +34,7 @@ npm start
 
 调度接口会拒绝不存在、站点不匹配、超过 15 分钟或预测签发时间早于量测时间的量测基准。旧版 `POST /api/dispatch` 仍保留，供现有界面兼容调用。
 
-当前演示将量测回执保存在服务进程内存中，重启后清空。生产部署应替换为 MQTT/Kafka 等采集链路与时序数据库或持久化状态仓库，但可保持上述报文契约不变。
+量测回执是由服务端 `JEV_STATE_ENCRYPTION_KEY` 加密并认证的短时票据，浏览器只拿到不透明的 `measurementId`；任意使用同一环境密钥的 Vercel 实例都能在 15 分钟内解析它。它不替代生产采集链路：现场落地仍应接入 MQTT/Kafka、时序数据库与可审计的持久化状态仓库。
 
 ## 功能
 
@@ -59,40 +59,48 @@ npm start
 - 禁止储能向电网反送；
 - 成本和运行指标计算。
 
-这遵循“模型给判断、代码做执行”的设计。服务端环境密钥不会进入浏览器 bundle 或报文截图；用户自带密钥会经一次性 HTTPS 请求换取短期会话，不会被加入调度报文或 Jev trace。
+这遵循“模型给判断、代码做执行”的设计。服务端环境密钥不会进入浏览器 bundle 或报文截图；用户自带密钥会经一次性 HTTPS 请求换取短期、加密的会话凭证，不会被加入调度报文或 Jev trace。
 
 ## Jev 连接与公开部署安全
 
-界面可以让用户输入自己的 Jev API Key，但它不是浏览器的长期凭据管理器：Key 只作为写入式输入提交给 HTTPS 后端校验，后端以不透明的 32 字节会话令牌响应。浏览器应仅在当前页面内存中保存该令牌，并通过 `X-Jev-Session` 发送；不能使用 LocalStorage、SessionStorage、URL、分析事件或日志保存 Key / 令牌。
+界面可以让用户输入自己的 Jev API Key，但它不是浏览器的长期凭据管理器：Key 只作为写入式输入通过 HTTPS 提交给服务端校验。服务端将其 AES-256-GCM 加密为不透明会话凭证；浏览器只在当前页面内存中保存该凭证，并通过 `X-Jev-Session` 发送。不能使用 LocalStorage、SessionStorage、URL、分析事件或日志保存 Key / 凭证。
 
-- `POST /api/jev/session`：后端用 `models.list()` 校验 Key，随后仅在本进程内存中保存它。返回的 `connectionToken` 不包含 Key。
-- `GET /api/jev/session`：只返回安全的连接状态、绝对到期时间和剩余调用数。
-- `DELETE /api/jev/session`：立即撤销该临时会话；服务重启也会清空所有此类会话。
-- 会话绝对有效期最长 15 分钟、空闲最长 5 分钟；校验端点和 Jev 调度均有进程内限流。过期、篡改或空会话令牌会得到 `401 jev_session_expired`，**不会**回退使用 `TYPESAFE_API_KEY`。
+- `POST /api/jev/session`：后端用 `models.list()` 校验 Key，返回不含原始 Key 的加密短时凭证。
+- `GET /api/jev/session` 和成功的调度响应会在 `X-Jev-Session-Renewed` 中轮换凭证，以维持滚动的 5 分钟闲置上限。
+- 会话绝对有效期最长 15 分钟；到期、篡改或空凭证会得到 `401 jev_session_expired`，**不会**回退使用 `TYPESAFE_API_KEY`。
+- `DELETE /api/jev/session` 是幂等确认，页面随后清除它唯一持有的凭证。无状态 Vercel 版本不能单独全局撤销已经签发的凭证；它仍会在最迟 5 分钟闲置、最长 15 分钟后失效。若需要立即全局吊销，应使用 Redis 拒绝表或轮换 `JEV_STATE_ENCRYPTION_KEY`。
 - API 响应采用 `no-store`，并附带来源校验、精确 CORS allowlist、拒绝 iframe、禁用嗅探和最小权限头；上游 Jev 错误不会原样返回页面。
 
-GitHub Pages 只能托管静态前端，不能安全地保存或代理 Jev Key。公开部署时请将 Express API 放在独立、受 HTTPS 保护的服务上，并配置：
+`JEV_ALLOW_ENVIRONMENT_KEY=false` 很关键：即便服务配置了 `TYPESAFE_API_KEY`，匿名访问者也无法消耗部署者的 Key，必须创建自己的临时会话。任何以 `VITE_` 开头的变量都会进入浏览器构建产物，绝不能放入 Jev Key 或 `JEV_STATE_ENCRYPTION_KEY`。该设计降低无意持久化与公开站点滥用风险，但不能抵御被恶意脚本、浏览器扩展或用户设备入侵的页面环境；生产账户应再叠加身份认证、WAF、分布式限流和可撤销会话存储。
 
-```dotenv
-# API 服务的私有环境，不放入 GitHub Actions、Vite 或 Pages 构建变量
-JEV_ALLOW_ENVIRONMENT_KEY=false
-CORS_ALLOWED_ORIGINS=https://your-github-user.github.io
-TRUST_PROXY=1
-NODE_ENV=production
+## Vercel 发布（推荐）
+
+项目已经是同域全栈部署：Vite 页面托管在 `/`，Express API 由 `/api/[...path]` Node Function 提供，`vercel.json` 会排除 `/api` 后再做 SPA 回退。因此部署后只需打开一个 Vercel 地址，**不用填写独立 API 部署地址，也不要设置 `VITE_API_BASE_URL`**。
+
+在 Vercel 项目的 Production 环境配置以下变量：
+
+| 变量 | 值 | 用途 |
+| --- | --- | --- |
+| `JEV_STATE_ENCRYPTION_KEY` | 新生成的 32-byte base64url Secret | 跨函数实例加密量测票据与临时 Jev 会话，必填。 |
+| `JEV_ALLOW_ENVIRONMENT_KEY` | `false` | 公开站点只允许访客使用自己的临时 Jev 连接。 |
+| `TRUST_PROXY` | `1` | 让 Express 正确识别 Vercel 转发的 HTTPS。 |
+
+可用下列命令生成第一项的值；只复制到 Vercel Secret，不要提交到 `.env`、Git 或 `VITE_` 变量：
+
+```powershell
+node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
 ```
 
-`JEV_ALLOW_ENVIRONMENT_KEY=false` 很关键：即便 API 服务本身配置了 `TYPESAFE_API_KEY`，匿名 Pages 访客也无法消耗部署者的 Key，必须创建自己的临时会话。生产环境默认也是关闭的；只有明确设置为 `true` 才会让 API 使用部署者的环境变量 Key。若使用 Vite 的 `VITE_API_BASE_URL` 指向该 API，它只能是公开的 HTTPS API 地址；任何以 `VITE_` 开头的变量都会进入前端构建产物，绝不能放入 Key。反向代理、CDN 与应用日志同样必须禁用请求体记录，并脱敏 `X-Jev-Session`，再在 API 前增加身份认证、WAF / 边缘限流和监控告警。
+公开 BYOK 部署不需要、也不应设置 `TYPESAFE_API_KEY`。如果要做仅自己可用的受管 Key 演示，请先开启 Vercel Deployment Protection / 应用身份认证，再把**已轮换的新 Key**以 Secret 写入 `TYPESAFE_API_KEY`，并显式设置 `JEV_ALLOW_ENVIRONMENT_KEY=true`。不要把曾在聊天、截图或代码中出现过的 Key 作为长期生产凭据。
 
-该设计降低了无意持久化与公开站点滥用风险，但无法抵御已被恶意脚本、浏览器扩展或用户设备入侵的页面环境。高权限或生产账户仍应使用受身份认证的后端、最小权限 Key 和可撤销的短期凭据。
-
-## GitHub Pages 发布
+## GitHub Pages 发布（可选）
 
 仓库包含 [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)。它只构建并发布 Vite 的 `dist` 静态产物；不会向 GitHub Actions、Pages 或前端 bundle 注入 `TYPESAFE_API_KEY`、Jev Key 或会话令牌。
 
 首次发布前：
 
-1. 在仓库 **Settings → Secrets and variables → Actions → Variables** 创建 `JEV_API_BASE_URL`，值为独立 API 服务的公开 HTTPS 地址，例如 `https://api.example.com`。这是公开地址，不是密钥；工作流会将其映射到构建时的 `VITE_API_BASE_URL`。
-2. 在该 API 服务配置 `JEV_ALLOW_ENVIRONMENT_KEY=false`、`TRUST_PROXY=1`，并把 `CORS_ALLOWED_ORIGINS` 精确设为 `https://<owner>.github.io`。注意 Origin 不包含项目站点的仓库路径。
+1. 在仓库 **Settings → Secrets and variables → Actions → Variables** 创建 `JEV_API_BASE_URL`，值为上述 Vercel 项目的公开 HTTPS 地址。这是公开地址，不是密钥；工作流会将其映射到构建时的 `VITE_API_BASE_URL`。
+2. 在 Vercel 额外将 `CORS_ALLOWED_ORIGINS` 精确设为 `https://<owner>.github.io`。注意 Origin 不包含项目站点的仓库路径；同域 Vercel 页面不需要此变量。
 3. 在仓库 **Settings → Pages** 选择 **GitHub Actions** 作为 Source，然后推送 `main`。工作流通过 Pages 提供的 base path 自动构建项目站点，例如 `https://<owner>.github.io/<repository>/`。
 
 如果未设置 `JEV_API_BASE_URL` 或地址不是 HTTPS，工作流会在上传前失败，而不是发布一个会把 Jev 请求错误发往 GitHub Pages 的页面。

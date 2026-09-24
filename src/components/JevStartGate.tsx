@@ -33,7 +33,7 @@ export interface JevStartGateProps {
 }
 
 const steps = [
-  { icon: <KeyRound size={18} />, title: "连接 Jev", detail: "建立临时、可撤销的会话" },
+  { icon: <KeyRound size={18} />, title: "连接 Jev", detail: "建立临时、短时有效的连接" },
   { icon: <Activity size={18} />, title: "读取现场量测", detail: "从当前时刻开始建立基线" },
   { icon: <CloudCog size={18} />, title: "生成逐时动作", detail: "预测后才输出充放电结果" },
 ];
