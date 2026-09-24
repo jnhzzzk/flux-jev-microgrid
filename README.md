@@ -93,11 +93,11 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'
 
 公开 BYOK 部署不需要、也不应设置 `TYPESAFE_API_KEY`。如果要做仅自己可用的受管 Key 演示，请先开启 Vercel Deployment Protection / 应用身份认证，再把**已轮换的新 Key**以 Secret 写入 `TYPESAFE_API_KEY`，并显式设置 `JEV_ALLOW_ENVIRONMENT_KEY=true`。不要把曾在聊天、截图或代码中出现过的 Key 作为长期生产凭据。
 
-## GitHub Pages 静态演示版
+## GitHub Pages 本地仿真版
 
-仓库包含 [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)，它会发布界面与操作流的静态预览。GitHub Pages 没有 Node 运行时，因此该版本**不能**运行 `/api`、接收 Jev Key、采集量测或生成真实充放电结果；界面会明确保持在未连接的启动状态，不会伪造结果。
+仓库包含 [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)。GitHub Pages 版本可直接运行一条完整的本地仿真路径：载入内置样本量测、生成 24 小时预置预测，并用与服务端共用的确定性功率、SOC 和需量约束计算充放电计划。结果会持续标为“本地仿真 · 未调用 Jev”，不是现场数据或生产控制指令。
 
-工作流不需要任何 Actions Secret 或 Variable，也不会向 GitHub Actions、Pages 或前端 bundle 注入 `TYPESAFE_API_KEY`、Jev Key、会话令牌或 `VITE_API_BASE_URL`。在仓库 **Settings → Pages** 选择 **GitHub Actions** 作为 Source 后，推送 `main` 即可发布到 `https://<owner>.github.io/<repository>/`。
+该路径不会运行 `/api`、接收 Jev Key、连接现场设备，也不会发起 Jev、应用 API 或现场设备网络请求；样本输入和规则输出可在页面的“仿真数据”入口审阅。工作流不需要任何 Actions Secret 或 Variable，也不会向 GitHub Actions、Pages 或前端 bundle 注入 `TYPESAFE_API_KEY`、Jev Key、会话令牌或 `VITE_API_BASE_URL`。在仓库 **Settings → Pages** 选择 **GitHub Actions** 作为 Source 后，推送 `main` 即可发布到 `https://<owner>.github.io/<repository>/`。
 
 若需要可运行的 Jev 决策，请部署同域 Node API（推荐 Vercel）或受信任的独立 API 服务；密钥只能写入该服务的环境变量，不能写入 GitHub Pages、GitHub Actions Variable 或任何 `VITE_` 变量。
 
@@ -114,6 +114,8 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'
 ```powershell
 npm run test
 npm run build
+npm run build:pages
+npm run qa:pages
 ```
 
 测试覆盖量测/预测时序、量测 SOC 作为预测基线、功率与 SOC 边界、逐时能量平衡，以及低价充电和晚峰放电行为。

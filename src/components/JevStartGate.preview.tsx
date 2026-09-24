@@ -36,6 +36,15 @@ export default function JevStartGatePreview() {
           />
         </section>
       ))}
+      <section>
+        <h2>local-simulation</h2>
+        <JevStartGate
+          mode="connect"
+          staticPreview
+          onConnect={() => undefined}
+          onStart={() => undefined}
+        />
+      </section>
     </main>
   );
 }

@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "concurrently -k -n api,ui -c cyan,magenta \"tsx watch server/index.ts\" \"vite --host 127.0.0.1\"",
     "build": "tsc -p tsconfig.server.json && vite build",
+    "build:pages": "node scripts/build-static-pages.mjs",
+    "qa:pages": "npm run build:pages && node scripts/qa-static-pages.mjs",
     "start": "node dist-server/server/index.js",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -25,6 +27,7 @@
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^5.0.0",
     "concurrently": "^9.1.0",
+    "playwright": "^1.63.0",
     "tsx": "^4.19.0",
     "typescript": "^5.8.0",
     "vite": "^7.0.0",

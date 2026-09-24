@@ -64,6 +64,55 @@ const result: DispatchResponse = {
   jevTrace: trace,
 };
 
+const localSimulation = {
+  measurement: {
+    siteId: "coastal-park",
+    measuredAt: "2026-09-23T09:15:24+08:00",
+    sequence: 1,
+    values: {
+      loadKW: 178,
+      solarKW: 92,
+      gridPowerKW: 86,
+      batteryPowerKW: 0,
+      batterySocPercent: 46,
+      demand15MinKW: 184,
+      billingPeakToDateKW: 248,
+    },
+  },
+  receipt: {
+    measurementId: "sample-m-001",
+    siteId: "coastal-park",
+    measuredAt: "2026-09-23T09:15:24+08:00",
+    receivedAt: "2026-09-23T09:15:24+08:00",
+    status: "accepted" as const,
+  },
+  forecast: {
+    siteId: "coastal-park",
+    measurementId: "sample-m-001",
+    useJev: false,
+    forecast: {
+      forecastId: "sample-f-001",
+      issuedAt: "2026-09-23T09:15:24+08:00",
+      horizonStart: "2026-09-23T10:00:00+08:00",
+      resolutionMinutes: 60 as const,
+      loadKW: [178, 192, 211],
+      solarKW: [92, 78, 54],
+      tariffCnyPerKWh: [0.68, 0.92, 1.18],
+    },
+  },
+};
+
+const localResult: DispatchResponse = {
+  ...result,
+  meta: {
+    source: "rules",
+    model: "local-simulation",
+    generatedAt: "2026-09-23T09:15:24+08:00",
+    latencyMs: 12,
+  },
+  jevTrace: undefined,
+};
+
 export default function JevPacketDialogPreview() {
   return (
     <main className="jev-packet-dialog-preview" aria-label="Jev 调度报文八状态预览">
@@ -79,6 +128,16 @@ export default function JevPacketDialogPreview() {
           />
         </section>
       ))}
+      <section>
+        <h2>local-simulation</h2>
+        <JevPacketDialog
+          open
+          result={localResult}
+          localSimulation={localSimulation}
+          onClose={() => undefined}
+          preview
+        />
+      </section>
     </main>
   );
 }

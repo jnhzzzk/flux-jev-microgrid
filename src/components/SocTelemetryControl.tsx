@@ -33,6 +33,10 @@ export interface SocTelemetryControlProps {
   capacityKWh: number;
   maxPowerKW: number;
   efficiencyPercent: number;
+  /** Distinguishes real BMS telemetry from Pages-local preset samples. */
+  dataSource?: "bms" | "sample";
+  /** Convenience flag for the Pages local simulation. */
+  localSimulation?: boolean;
   loading?: boolean;
   onModeChange: (mode: SocInputMode) => void;
   onSimulationChange: (value: number) => void;
@@ -64,6 +68,8 @@ export function SocTelemetryControl({
   capacityKWh,
   maxPowerKW,
   efficiencyPercent,
+  dataSource = "bms",
+  localSimulation,
   loading = false,
   onModeChange,
   onSimulationChange,
@@ -81,40 +87,43 @@ export function SocTelemetryControl({
   const isLoading = loading || previewState === "loading";
   const isError = previewState === "error";
   const isSuccess = previewState === "success";
+  const isSample = localSimulation ?? dataSource === "sample";
+  const sourceName = isSample ? "样本" : "实测";
+  const liveSocTitle = isSample ? "样本 SOC" : "实测 SOC";
 
   const status = isLoading
-    ? { label: "正在刷新", icon: <LoaderCircle size={14} /> }
+    ? { label: isSample ? "正在载入" : "正在刷新", icon: <LoaderCircle size={14} /> }
     : isError
       ? { label: "校验失败", icon: <TriangleAlert size={14} /> }
       : isSuccess
-        ? { label: "量测已同步", icon: <CheckCircle2 size={14} /> }
+        ? { label: isSample ? "样本已载入" : "量测已同步", icon: <CheckCircle2 size={14} /> }
         : measuredAt
-          ? { label: "校验通过", icon: <ShieldCheck size={14} /> }
-          : { label: "等待量测", icon: <Clock3 size={14} /> };
+          ? { label: isSample ? "样本就绪" : "校验通过", icon: <ShieldCheck size={14} /> }
+          : { label: isSample ? "等待样本" : "等待量测", icon: <Clock3 size={14} /> };
 
   return (
     <section
       className="soc-telemetry"
       data-mode={mode}
       data-preview-state={previewState}
-      aria-label="储能 SOC 量测与仿真输入"
+      aria-label={isSample ? "储能 SOC 样本与本地仿真输入" : "储能 SOC 量测与仿真输入"}
       aria-busy={isLoading}
     >
       <header className="soc-telemetry__header">
         <div>
           <BatteryCharging size={18} />
-          <h2>{mode === "live" ? "实测 SOC" : "SOC 仿真"}</h2>
+          <h2>{mode === "live" ? liveSocTitle : "SOC 仿真"}</h2>
         </div>
         <button
           type="button"
           className="soc-mode-button"
           disabled={isDisabled || isLoading}
           aria-pressed={mode === "simulation"}
-          aria-label={mode === "live" ? "开启 SOC 仿真调试" : "退出 SOC 仿真调试"}
+          aria-label={mode === "live" ? `开启 ${isSample ? "本地" : "SOC"} 仿真调试` : `退出 ${isSample ? "本地" : "SOC"} 仿真调试`}
           onClick={() => onModeChange(mode === "live" ? "simulation" : "live")}
         >
           {isLoading ? <LoaderCircle size={15} /> : mode === "live" ? <FlaskConical size={15} /> : <RotateCcw size={15} />}
-          <span>{isLoading ? "刷新中" : mode === "live" ? "仿真" : "返回实测"}</span>
+          <span>{isLoading ? (isSample ? "载入中" : "刷新中") : mode === "live" ? "仿真" : `返回${sourceName}`}</span>
         </button>
       </header>
 
@@ -130,7 +139,7 @@ export function SocTelemetryControl({
           <div
             className="soc-meter"
             role="meter"
-            aria-label="BMS 实测 SOC"
+            aria-label={isSample ? "样本 SOC" : "BMS 实测 SOC"}
             aria-valuemin={minSocPercent}
             aria-valuemax={maxSocPercent}
             aria-valuenow={Math.round(measured)}
@@ -145,18 +154,18 @@ export function SocTelemetryControl({
           </div>
 
           <p className="soc-source-line">
-            <span><ShieldCheck size={14} />来源 BMS</span>
-            <span><Clock3 size={14} />{formatMeasurementTime(measuredAt)}</span>
-            <span><LockKeyhole size={14} />只读</span>
+            <span><ShieldCheck size={14} />来源 {isSample ? "预置样本" : "BMS"}</span>
+            <span><Clock3 size={14} />{isSample ? "载入 " : ""}{formatMeasurementTime(measuredAt)}</span>
+            <span><LockKeyhole size={14} />{isSample ? "本地" : "只读"}</span>
           </p>
         </div>
       ) : (
         <div className="soc-simulation">
           <div className="soc-simulation__comparison">
-            <span>实测<strong>{measured.toFixed(1)}%</strong></span>
+            <span>{sourceName}<strong>{measured.toFixed(1)}%</strong></span>
             <span>仿真<output htmlFor={sliderId}>{simulatedSocPercent.toFixed(0)}%</output></span>
           </div>
-          <label htmlFor={sliderId}>下一轮决策使用的模拟 SOC</label>
+          <label htmlFor={sliderId}>{isSample ? "下一轮本地仿真使用的模拟 SOC" : "下一轮决策使用的模拟 SOC"}</label>
           <input
             id={sliderId}
             className="soc-simulation__slider"
@@ -174,7 +183,7 @@ export function SocTelemetryControl({
           <div className="soc-simulation__range" aria-hidden="true"><span>20%</span><span>85%</span></div>
           <p id={`${sliderId}-note`} className="soc-simulation__notice" role={isError ? "alert" : undefined}>
             <TriangleAlert size={14} />
-            {isError ? "仿真值未通过校验，请调整后重试。" : "仅供下一轮测试，不写入 BMS。"}
+            {isError ? "仿真值未通过校验，请调整后重试。" : isSample ? "仅供本地仿真调整，不写入设备。" : "仅供下一轮测试，不写入 BMS。"}
           </p>
         </div>
       )}

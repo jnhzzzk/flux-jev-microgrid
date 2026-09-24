@@ -26,7 +26,7 @@ export interface JevStartGateProps {
   source?: "session" | "environment";
   loading?: boolean;
   error?: string | null;
-  /** A Pages-hosted interface preview that intentionally has no API runtime. */
+  /** A Pages-hosted local simulation that intentionally has no API runtime. */
   staticPreview?: boolean;
   onConnect: () => void;
   onStart: () => void;
@@ -34,10 +34,16 @@ export interface JevStartGateProps {
   previewState?: JevStartGatePreviewState;
 }
 
-const steps = [
+const jevSteps = [
   { icon: <KeyRound size={18} />, title: "连接 Jev", detail: "建立临时、短时有效的连接" },
   { icon: <Activity size={18} />, title: "读取现场量测", detail: "从当前时刻开始建立基线" },
   { icon: <CloudCog size={18} />, title: "生成逐时动作", detail: "预测后才输出充放电结果" },
+];
+
+const localSimulationSteps = [
+  { icon: <Activity size={18} />, title: "载入样本量测", detail: "预置样本，不连接现场设备" },
+  { icon: <CloudCog size={18} />, title: "生成预置预测", detail: "展示 24 小时预置曲线" },
+  { icon: <Cpu size={18} />, title: "计算仿真结果", detail: "按 SOC、功率与需量约束推演" },
 ];
 
 function copyFor(mode: JevStartGateMode, source?: "session" | "environment") {
@@ -67,7 +73,8 @@ function copyFor(mode: JevStartGateMode, source?: "session" | "environment") {
 
 /**
  * The deliberate cold-start state for Flux. It keeps the operational
- * workbench absent until the user has explicitly chosen a Jev connection.
+ * workbench absent until the user has explicitly chosen a Jev connection, or
+ * has deliberately started the clearly-labelled Pages local simulation.
  */
 export function JevStartGate({
   mode,
@@ -84,7 +91,7 @@ export function JevStartGate({
   const isPreviewError = previewState === "error";
   const isPreviewDisabled = previewState === "disabled";
   const isPreviewSuccess = previewState === "success";
-  const isStaticPreview = staticPreview && !preview;
+  const isStaticPreview = staticPreview;
   const effectiveMode: JevStartGateMode = isPreviewLoading
     ? "checking"
     : isPreviewError
@@ -94,16 +101,17 @@ export function JevStartGate({
         : mode;
   const isReady = effectiveMode === "ready";
   const isLoading = loading || isPreviewLoading || effectiveMode === "checking";
-  const isDisabled = isPreviewDisabled || isLoading || isStaticPreview;
+  const isDisabled = isPreviewDisabled || isLoading;
   const copy = isStaticPreview
     ? {
-        title: "静态界面预览已就绪",
-        description: "此 GitHub Pages 站点只展示操作流程与界面状态；未部署 Jev API，因此不会采集量测、生成预测或伪造充放电结果。",
+        title: "本地仿真已就绪",
+        description: "使用预置样本与确定性约束推演 24 小时充放电；无需 API Key，不调用 Jev、外部接口或现场设备。",
       }
     : copyFor(effectiveMode, source);
   const displayedError = isPreviewError ? "连接状态暂时不可用。请重新打开 Jev 连接入口。" : error;
-  const canStart = !isStaticPreview && (isReady || (effectiveMode === "error" && source !== undefined));
-  const activeStep = isStaticPreview ? -1 : canStart ? 1 : 0;
+  const canStart = isStaticPreview || isReady || (effectiveMode === "error" && source !== undefined);
+  const activeStep = canStart ? 1 : 0;
+  const steps = isStaticPreview ? localSimulationSteps : jevSteps;
 
   const content = (
     <div className="jev-start-gate__surface">
@@ -118,7 +126,7 @@ export function JevStartGate({
         {!isStaticPreview && displayedError && <p className="jev-start-gate__error" role="alert"><TriangleAlert size={16} />{displayedError}</p>}
       </div>
 
-      <ol className="jev-start-gate__steps" aria-label="逐时决策启动顺序">
+      <ol className="jev-start-gate__steps" aria-label={isStaticPreview ? "本地仿真启动顺序" : "逐时决策启动顺序"}>
         {steps.map((step, index) => {
           const state = index < activeStep ? "complete" : index === activeStep ? "active" : "waiting";
           return (
@@ -132,15 +140,15 @@ export function JevStartGate({
       </ol>
 
       <footer className="jev-start-gate__footer">
-        <p><ShieldCheck size={16} />{isStaticPreview ? "演示版不接收或保存 Jev API Key。" : "未完成连接前，不会采集现场量测、生成预测或展示充放电结果。"}</p>
+        <p><ShieldCheck size={16} />{isStaticPreview ? "本地仿真不发送数据、不接收或保存 Jev API Key，也不会控制设备。" : "未完成连接前，不会采集现场量测、生成预测或展示充放电结果。"}</p>
         <button
           type="button"
-          data-state={isStaticPreview ? "default" : isLoading ? "loading" : displayedError && !canStart ? "error" : canStart ? "success" : "default"}
+          data-state={isLoading ? "loading" : displayedError && !canStart ? "error" : canStart ? "success" : "default"}
           disabled={isDisabled}
           onClick={canStart ? onStart : onConnect}
         >
           {isLoading ? <LoaderCircle size={18} className="spinner" aria-hidden="true" /> : canStart ? <Cpu size={18} /> : <KeyRound size={18} />}
-          <span>{isStaticPreview ? "需要部署 API" : isLoading ? "正在检查连接" : isReady ? "开始逐时决策" : canStart ? "重新开始逐时决策" : displayedError ? "重新连接 Jev" : "连接 Jev"}</span>
+          <span>{isStaticPreview ? "开始本地仿真" : isLoading ? "正在检查连接" : isReady ? "开始逐时决策" : canStart ? "重新开始逐时决策" : displayedError ? "重新连接 Jev" : "连接 Jev"}</span>
         </button>
       </footer>
     </div>

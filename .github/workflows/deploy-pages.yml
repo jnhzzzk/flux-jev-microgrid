@@ -1,4 +1,4 @@
-name: Deploy static GitHub Pages demo
+name: Deploy GitHub Pages local simulation
 
 on:
   push:
@@ -30,7 +30,7 @@ jobs:
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
       - name: Install dependencies
         run: npm ci
-      - name: Build static interface preview
+      - name: Build local simulation interface
         env:
           VITE_BASE_PATH: ${{ steps.pages.outputs.base_path }}/
           VITE_STATIC_PREVIEW: "true"

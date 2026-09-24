@@ -38,6 +38,22 @@ export default function JevConnectionDialogPreview() {
           />
         </section>
       ))}
+      <section>
+        <h2>local-simulation</h2>
+        <JevConnectionDialog
+          open
+          connection={null}
+          serverConfigured={false}
+          loading={false}
+          error={null}
+          staticPreview
+          onClose={() => undefined}
+          onConnect={() => undefined}
+          onDisconnect={() => undefined}
+          onStartSimulation={() => undefined}
+          preview
+        />
+      </section>
     </main>
   );
 }

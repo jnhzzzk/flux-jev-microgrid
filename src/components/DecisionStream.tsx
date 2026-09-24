@@ -35,6 +35,10 @@ export interface DecisionStreamProps {
   measuredSolarKW?: number;
   measuredSocPercent?: number;
   predictedDemandKW?: number;
+  /** Makes Pages-only output explicitly local rather than a Jev decision stream. */
+  mode?: "jev" | "local-simulation";
+  /** Convenience flag for the Pages local simulation. */
+  localSimulation?: boolean;
   onAdvance: () => void;
   previewState?: DecisionStreamPreviewState;
 }
@@ -69,6 +73,8 @@ export function DecisionStream({
   measuredSolarKW,
   measuredSocPercent,
   predictedDemandKW,
+  mode = "jev",
+  localSimulation,
   onAdvance,
   previewState = "default",
 }: DecisionStreamProps) {
@@ -83,6 +89,7 @@ export function DecisionStream({
   const power = Math.abs(decision.batteryPowerKW);
   const action = actionCopy[decision.action];
   const probability = Math.round(decision.probabilities[decision.action] * 100);
+  const isLocalSimulation = localSimulation ?? mode === "local-simulation";
   const demandLabel = predictedDemandKW === undefined ? "净负荷" : "15 分钟需量";
   const demandValue = predictedDemandKW ?? decision.netLoadKW;
 
@@ -93,16 +100,16 @@ export function DecisionStream({
   }, [running]);
 
   const statusText = previewState === "loading"
-    ? "正在接收新判断"
+    ? isLocalSimulation ? "正在计算下一时段" : "正在接收新判断"
     : previewState === "error"
-      ? "决策流中断"
+      ? isLocalSimulation ? "推演中断" : "决策流中断"
       : previewState === "success"
-        ? "指令已同步"
-        : !playing
-          ? "已暂停"
-          : held
-            ? "查看中，暂缓推进"
-            : "逐时推送中";
+        ? isLocalSimulation ? "推演已更新" : "指令已同步"
+      : !playing
+        ? "已暂停"
+        : held
+          ? "查看中，暂缓推进"
+            : isLocalSimulation ? "逐时推演中" : "逐时推送中";
 
   return (
     <section
@@ -110,7 +117,7 @@ export function DecisionStream({
       data-action={decision.action}
       data-running={running ? "true" : "false"}
       data-preview-state={previewState}
-      aria-label="逐时实时决策流"
+      aria-label={isLocalSimulation ? "本地逐时推演" : "逐时实时决策流"}
       onPointerEnter={() => setHeld(true)}
       onPointerLeave={() => setHeld(false)}
       onFocusCapture={() => setHeld(true)}
@@ -122,7 +129,7 @@ export function DecisionStream({
         <div className="stream-live">
           <span className="stream-live__dot" aria-hidden="true" />
           <Radio size={17} aria-hidden="true" />
-          <strong>实时决策流</strong>
+          <strong>{isLocalSimulation ? "本地逐时推演" : "实时决策流"}</strong>
           <small>{statusText}</small>
         </div>
         <div className="stream-window">
@@ -130,7 +137,7 @@ export function DecisionStream({
           <button
             type="button"
             className="stream-toggle"
-            aria-label={playing ? "暂停逐时决策流" : "继续逐时决策流"}
+            aria-label={playing ? isLocalSimulation ? "暂停本地逐时推演" : "暂停逐时决策流" : isLocalSimulation ? "继续本地逐时推演" : "继续逐时决策流"}
             aria-pressed={!playing}
             disabled={!canStream}
             onClick={() => setPlaying((current) => !current)}
@@ -144,33 +151,35 @@ export function DecisionStream({
         <ol className="stream-feed" key={`${selectedHour}-${generatedAt}`} aria-label="当前决策事件">
           <li style={{ "--stream-index": 0 } as React.CSSProperties}>
             <time>{formatStreamTime(generatedAt, 0)}</time>
-            <span className="stream-stage">量测</span>
+            <span className="stream-stage">{isLocalSimulation ? "样本量测" : "量测"}</span>
             <p>负荷 {valueOrDash(measuredLoadKW)} kW · 光伏 {valueOrDash(measuredSolarKW)} kW · SOC {valueOrDash(measuredSocPercent, 1)}%</p>
           </li>
           <li style={{ "--stream-index": 1 } as React.CSSProperties}>
             <time>{formatStreamTime(generatedAt, 1)}</time>
-            <span className="stream-stage">预测</span>
+            <span className="stream-stage">{isLocalSimulation ? "预置预测" : "预测"}</span>
             <p>净负荷 {decision.netLoadKW.toFixed(0)} kW · {demandLabel} {demandValue.toFixed(0)} kW · 电价 ¥{decision.tariffCnyPerKWh.toFixed(2)}</p>
           </li>
           <li style={{ "--stream-index": 2 } as React.CSSProperties}>
             <time>{formatStreamTime(generatedAt, 2)}</time>
-            <span className="stream-stage">判断</span>
-            <p>{decision.rationale} · {action.label}概率 {probability}%</p>
+            <span className="stream-stage">{isLocalSimulation ? "规则计算" : "判断"}</span>
+            <p>{decision.rationale} · {isLocalSimulation ? "约束已校核" : `${action.label}概率 ${probability}%`}</p>
           </li>
           <li className="stream-feed__command" style={{ "--stream-index": 3 } as React.CSSProperties}>
             <time>{formatStreamTime(generatedAt, 3)}</time>
-            <span className="stream-stage">指令</span>
+            <span className="stream-stage">{isLocalSimulation ? "仿真结果" : "指令"}</span>
             <p><strong>{action.label} {power.toFixed(0)} kW</strong> · SOC 调整至 {decision.socAfter.toFixed(0)}%</p>
           </li>
         </ol>
 
         <div className="stream-command" aria-live="polite" aria-atomic="true">
           <span className="stream-command__icon"><ActionIcon action={decision.action} size={25} /></span>
-          <small>最终指令</small>
+          <small>{isLocalSimulation ? "仿真结果" : "最终指令"}</small>
           <strong>{action.label}</strong>
           <p>{power.toFixed(0)}<span> kW</span></p>
           <dl>
-            <div><dt>置信</dt><dd>{Math.round(decision.confidence * 100)}%</dd></div>
+            {isLocalSimulation
+              ? <div><dt>需量</dt><dd>{demandValue.toFixed(0)} kW</dd></div>
+              : <div><dt>置信</dt><dd>{Math.round(decision.confidence * 100)}%</dd></div>}
             <div><dt>SOC</dt><dd>{decision.socAfter.toFixed(0)}%</dd></div>
           </dl>
         </div>

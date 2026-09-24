@@ -42,6 +42,7 @@ import { JevConnectionDialog, type JevConnectionView } from "./components/JevCon
 import { JevPacketDialog } from "./components/JevPacketDialog";
 import { JevStartGate, type JevStartGateMode } from "./components/JevStartGate";
 import { SocTelemetryControl, type SocInputMode } from "./components/SocTelemetryControl";
+import { createLocalSimulation } from "./data/localSimulation";
 import { createScenario, type ScenarioId } from "./data/scenarios";
 import { buildForecastRequest, buildMeasurementRequest } from "./data/workflow";
 
@@ -84,6 +85,17 @@ function FluxMark() {
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
 const staticPreviewMode = import.meta.env.VITE_STATIC_PREVIEW === "true";
+const LOCAL_SIMULATION_STAGE_MS = 320;
+
+function waitForLocalSimulationStage(): Promise<void> {
+  if (
+    typeof window !== "undefined"
+    && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  ) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => window.setTimeout(resolve, LOCAL_SIMULATION_STAGE_MS));
+}
 
 class ApiRequestError extends Error {
   constructor(
@@ -167,15 +179,33 @@ function WorkflowStrip({
   receipt,
   forecast,
   result,
+  localSimulation = false,
 }: {
   phase: WorkflowPhase;
   failedStep: number;
   receipt: MeasurementReceipt | null;
   forecast: ForecastDispatchRequest | null;
   result: DispatchResponse | null;
+  localSimulation?: boolean;
 }) {
   const current = phase === "error" ? failedStep : phaseIndex[phase];
-  const steps = [
+  const steps = localSimulation ? [
+    {
+      title: "样本量测",
+      detail: receipt ? `${formatTime(receipt.measuredAt)} · 样本已载入` : "内置样本，不连接现场设备",
+      icon: <Activity size={19} />,
+    },
+    {
+      title: "预置预测",
+      detail: forecast ? `${shortId(forecast.forecast.forecastId)} · 24 h` : "24 小时预置曲线",
+      icon: <CloudCog size={19} />,
+    },
+    {
+      title: "本地规则",
+      detail: result ? `约束计算 · ${result.meta.latencyMs} ms` : "SOC、功率与需量约束",
+      icon: <Cpu size={19} />,
+    },
+  ] : [
     {
       title: "现场量测",
       detail: receipt ? `${formatTime(receipt.measuredAt)} · 已入库` : "负荷、光伏、电网与 SOC",
@@ -194,7 +224,7 @@ function WorkflowStrip({
   ];
 
   return (
-    <section className="workflow-strip" aria-label="决策输入链路" aria-live="polite">
+    <section className="workflow-strip" aria-label={localSimulation ? "本地仿真输入链路" : "决策输入链路"} aria-live="polite">
       {steps.map((step, index) => {
         const state = phase === "error" && failedStep === index
           ? "error"
@@ -263,9 +293,9 @@ function HourRail({
   );
 }
 
-function ProbabilityBars({ selected }: { selected: HourlyDispatch }) {
+function ProbabilityBars({ selected, localSimulation = false }: { selected: HourlyDispatch; localSimulation?: boolean }) {
   return (
-    <div className="probability-list" aria-label="动作概率分布">
+    <div className="probability-list" aria-label={localSimulation ? "动作规则优先度" : "动作概率分布"}>
       {(["charge", "hold", "discharge"] as DispatchAction[]).map((action) => {
         const value = selected.probabilities[action];
         return (
@@ -292,6 +322,7 @@ function UnifiedWorkspace({
   scenarioId,
   dirty,
   loading,
+  localSimulation,
   onSelectHour,
   onSelectScenario,
   onUpdateSoc,
@@ -308,6 +339,7 @@ function UnifiedWorkspace({
   scenarioId: ScenarioId;
   dirty: boolean;
   loading: boolean;
+  localSimulation: boolean;
   onSelectHour: (hour: number) => void;
   onSelectScenario: (id: ScenarioId) => void;
   onUpdateSoc: (value: number) => void;
@@ -332,11 +364,11 @@ function UnifiedWorkspace({
 
   return (
     <div className="unified-workspace" id="operations-overview">
-      <section className="decision-pane" aria-label="逐时决策与能量趋势">
+      <section className="decision-pane" aria-label={localSimulation ? "本地逐时仿真与能量趋势" : "逐时决策与能量趋势"}>
         <header className="workspace-heading unified-heading">
-          <div><h1>逐时快速决策</h1><p>先量测、再预测；动作、趋势与控制输入保持同屏。</p></div>
+          <div><h1>逐时快速决策</h1><p>{localSimulation ? "样本量测、预置预测与规则结果同屏呈现。" : "先量测、再预测；动作、趋势与控制输入保持同屏。"}</p></div>
           <span className="source-chip" data-source={result.meta.source}>
-            <i aria-hidden="true" />{result.meta.source === "jev" ? "Jev 在线" : "本地策略"}
+            <i aria-hidden="true" />{localSimulation ? "本地仿真" : result.meta.source === "jev" ? "Jev 在线" : "本地策略"}
           </span>
         </header>
 
@@ -348,6 +380,7 @@ function UnifiedWorkspace({
           measuredSolarKW={currentMeasurement?.solarKW}
           measuredSocPercent={currentMeasurement?.batterySocPercent}
           predictedDemandKW={selectedDemand}
+          localSimulation={localSimulation}
           onAdvance={() => onSelectHour((selectedHour + 1) % 24)}
         />
 
@@ -355,7 +388,7 @@ function UnifiedWorkspace({
           <div className="trend-heading">
             <div><ChartNoAxesCombined size={18} /><h2>全天趋势与动作</h2></div>
             <div className="chart-legend"><span><i data-series="load" />负荷</span><span><i data-series="solar" />光伏</span><span><i data-series="soc" />SOC</span></div>
-            <p className="savings-inline"><span>预计节省</span><strong>¥{result.summary.savingsCny.toFixed(0)}</strong><small>−{result.summary.savingsPercent.toFixed(1)}%</small></p>
+            <p className="savings-inline"><span>{localSimulation ? "样本测算" : "预计节省"}</span><strong>¥{result.summary.savingsCny.toFixed(0)}</strong><small>−{result.summary.savingsPercent.toFixed(1)}%</small></p>
           </div>
           <EnergyChart schedule={result.schedule} selectedHour={selectedHour} />
           <div className="dispatch-timeline">
@@ -378,9 +411,9 @@ function UnifiedWorkspace({
         </section>
       </section>
 
-      <aside className={`control-dock${hasDemandInputs ? " control-dock--demand" : ""}`} aria-label="输入、判断与策略控制">
+      <aside className={`control-dock${hasDemandInputs ? " control-dock--demand" : ""}`} aria-label={localSimulation ? "样本输入、规则计算与仿真控制" : "输入、判断与策略控制"}>
         <section className="control-section control-section--input">
-          <div className="inspector-heading"><div><Activity size={18} /><h2>输入基线</h2></div><span>{formatAge(receipt?.measuredAt, now)}</span></div>
+          <div className="inspector-heading"><div><Activity size={18} /><h2>{localSimulation ? "样本基线" : "输入基线"}</h2></div><span>{localSimulation ? (receipt ? "样本已载入" : "等待载入") : formatAge(receipt?.measuredAt, now)}</span></div>
           <dl className="measurement-grid">
             <div><dt>站内负荷</dt><dd>{currentMeasurement?.loadKW.toFixed(0) ?? "—"} kW</dd></div>
             <div><dt>光伏出力</dt><dd>{currentMeasurement?.solarKW.toFixed(0) ?? "—"} kW</dd></div>
@@ -389,27 +422,27 @@ function UnifiedWorkspace({
                 <div><dt>当前 15 分钟需量</dt><dd>{currentMeasurement.demand15MinKW?.toFixed(0)} kW</dd></div>
                 <div><dt>需量控制目标</dt><dd>{demandForecast.controlTargetKW.toFixed(0)} kW</dd></div>
                 <div><dt>月内需量峰值</dt><dd>{currentMeasurement.billingPeakToDateKW?.toFixed(0)} kW</dd></div>
-                <div><dt>实测 SOC</dt><dd>{currentMeasurement.batterySocPercent.toFixed(1)}%</dd></div>
+                <div><dt>{localSimulation ? "样本 SOC" : "实测 SOC"}</dt><dd>{currentMeasurement.batterySocPercent.toFixed(1)}%</dd></div>
               </>
             ) : (
               <>
                 <div><dt>电网功率</dt><dd>{currentMeasurement?.gridPowerKW.toFixed(0) ?? "—"} kW</dd></div>
-                <div><dt>实测 SOC</dt><dd>{currentMeasurement?.batterySocPercent.toFixed(1) ?? "—"}%</dd></div>
+                <div><dt>{localSimulation ? "样本 SOC" : "实测 SOC"}</dt><dd>{currentMeasurement?.batterySocPercent.toFixed(1) ?? "—"}%</dd></div>
               </>
             )}
           </dl>
-          <p className="trace-inline"><span>量测 {shortId(receipt?.measurementId)}</span><span>预测 {shortId(forecast?.forecast.forecastId)}</span></p>
+          <p className="trace-inline"><span>{localSimulation ? "样本" : "量测"} {shortId(receipt?.measurementId)}</span><span>{localSimulation ? "预置预测" : "预测"} {shortId(forecast?.forecast.forecastId)}</span></p>
         </section>
 
         <section className="control-section control-section--judgment">
-          <div className="inspector-heading"><div><CircleGauge size={18} /><h2>Jev 判断</h2></div></div>
-          <ProbabilityBars selected={selected} />
+          <div className="inspector-heading"><div><CircleGauge size={18} /><h2>{localSimulation ? "规则计算" : "Jev 判断"}</h2></div></div>
+          <ProbabilityBars selected={selected} localSimulation={localSimulation} />
           <p className="constraint-inline"><ShieldCheck size={16} />{selected.constraint ? `硬约束：${selected.constraint}` : "功率、SOC 与防反送约束均通过"}</p>
         </section>
 
         <section className="control-section control-section--strategy">
-          <div className="inspector-heading"><div><Settings2 size={18} /><h2>运行场景</h2></div><span>{dirty ? "待同步" : "已同步"}</span></div>
-          <div className="scenario-picker" role="radiogroup" aria-label="测试场景">
+          <div className="inspector-heading"><div><Settings2 size={18} /><h2>{localSimulation ? "仿真场景" : "运行场景"}</h2></div><span>{dirty ? "待同步" : "已同步"}</span></div>
+          <div className="scenario-picker" role="radiogroup" aria-label={localSimulation ? "本地仿真场景" : "测试场景"}>
             {scenarioCopy.map((item) => (
               <button
                 type="button"
@@ -442,6 +475,7 @@ function UnifiedWorkspace({
             capacityKWh={scenario.battery.capacityKWh}
             maxPowerKW={scenario.battery.maxPowerKW}
             efficiencyPercent={Math.round(scenario.battery.roundTripEfficiency * 100)}
+            localSimulation={localSimulation}
             loading={loading}
             onModeChange={changeSocInputMode}
             onSimulationChange={onUpdateSoc}
@@ -457,10 +491,14 @@ function UnifiedWorkspace({
         >
           {loading ? <span className="spinner" aria-hidden="true" /> : dirty ? <RefreshCw size={18} /> : <CheckCircle2 size={18} />}
           <span>{loading
-            ? "正在执行量测、预测与决策"
+            ? localSimulation ? "正在载入样本、预测与规则计算" : "正在执行量测、预测与决策"
             : dirty
-              ? socInputMode === "simulation" ? "用仿真值重新决策" : "采集并重新决策"
-              : socInputMode === "simulation" ? "仿真策略已同步" : "当前策略已同步"}</span>
+              ? localSimulation
+                ? socInputMode === "simulation" ? "用调整 SOC 重新仿真" : "重新运行本地仿真"
+                : socInputMode === "simulation" ? "用仿真值重新决策" : "采集并重新决策"
+              : localSimulation
+                ? socInputMode === "simulation" ? "本地仿真已同步" : "本地规则已同步"
+                : socInputMode === "simulation" ? "仿真策略已同步" : "当前策略已同步"}</span>
         </button>
       </aside>
     </div>
@@ -586,11 +624,62 @@ export default function TabletApp() {
     }
   }
 
+  async function runLocalSimulation(nextScenario: MicrogridScenario, keepPreviousResult: boolean): Promise<boolean> {
+    const startedAt = Date.now();
+    setLoading(true);
+    setError(null);
+    setFailedStep(0);
+    setPhase("measuring");
+    let step = 0;
+
+    try {
+      const simulation = createLocalSimulation(nextScenario, new Date(), sequence.current++);
+      setMeasurement(simulation.measurement);
+      setReceipt(simulation.receipt);
+      await waitForLocalSimulationStage();
+
+      step = 1;
+      setPhase("forecasting");
+      setForecast(simulation.forecast);
+      await waitForLocalSimulationStage();
+
+      step = 2;
+      setPhase("deciding");
+      await waitForLocalSimulationStage();
+
+      setResult({
+        ...simulation.result,
+        meta: {
+          ...simulation.result.meta,
+          latencyMs: Date.now() - startedAt,
+        },
+      });
+      setNow(Date.now());
+      setDirty(false);
+      setPhase("ready");
+      setDecisionPresentation("active");
+      return true;
+    } catch (caught) {
+      const returnToEntry = !keepPreviousResult;
+      if (returnToEntry) resetDecisionPresentation();
+      setFailedStep(step);
+      setPhase("error");
+      setError(caught instanceof Error ? caught.message : "本地仿真未完成，请重新运行。");
+      if (returnToEntry) setDecisionPresentation("entry");
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function startDecision(nextScenario = scenario): Promise<boolean> {
     if (staticPreviewMode) {
-      setConnectionError(null);
-      setConnectionDialogOpen(true);
-      return false;
+      const keepPreviousResult = decisionPresentation === "active" && Boolean(result);
+      if (!keepPreviousResult) {
+        resetDecisionPresentation();
+        setDecisionPresentation("running");
+      }
+      return runLocalSimulation(nextScenario, keepPreviousResult);
     }
     if (!canRunJev()) {
       setConnectionError("请先连接 Jev，再开始首轮逐时决策。");
@@ -684,7 +773,7 @@ export default function TabletApp() {
     if (staticPreviewMode) {
       // This is only defensive: the static dialog intentionally has no field.
       void apiKey;
-      setConnectionError("静态演示版未部署 Jev API，因此不会接收 API Key。");
+      setConnectionError("本地仿真版不会接收 Jev API Key。");
       return;
     }
     setConnectionLoading(true);
@@ -792,7 +881,9 @@ export default function TabletApp() {
         ? "ready"
         : "connect";
   const siteMeasurementLabel = staticPreviewMode
-    ? "静态界面预览"
+    ? decisionPresentation === "entry"
+      ? "本地仿真就绪"
+      : `样本量测 · ${formatAge(receipt?.measuredAt, now)}`
     : decisionPresentation === "entry"
     ? !statusChecked
       ? "正在确认 Jev"
@@ -800,11 +891,11 @@ export default function TabletApp() {
         ? "等待开始逐时决策"
         : "等待 Jev 连接"
     : formatAge(receipt?.measuredAt, now);
-  const siteConnectionState = staticPreviewMode ? "waiting" : !statusChecked ? "checking" : hasJevCapability ? "ready" : "waiting";
+  const siteConnectionState = staticPreviewMode ? "ready" : !statusChecked ? "checking" : hasJevCapability ? "ready" : "waiting";
   const connectionLabel = connectionLoading
     ? "处理中"
     : staticPreviewMode
-      ? "API 未部署"
+      ? "本地仿真"
     : hasBrowserJevSession
       ? "Jev 已连接"
       : hasManagedJev
@@ -827,14 +918,14 @@ export default function TabletApp() {
               ref={connectionTriggerRef}
               type="button"
               className="connection-action"
-              data-state={connectionLoading ? "loading" : hasBrowserJevSession || hasManagedJev ? "success" : "default"}
+              data-state={connectionLoading ? "loading" : staticPreviewMode || hasBrowserJevSession || hasManagedJev ? "success" : "default"}
               disabled={connectionLoading}
-              aria-label={staticPreviewMode ? "查看 Jev API 部署说明" : "管理 Jev 连接"}
+              aria-label={staticPreviewMode ? "查看本地仿真说明" : "管理 Jev 连接"}
               aria-haspopup="dialog"
               aria-expanded={connectionDialogOpen}
               onClick={openConnectionDialog}
             >
-              {connectionLoading ? <span className="spinner" aria-hidden="true" /> : hasJevCapability ? <Wifi size={16} /> : <KeyRound size={16} />}
+              {connectionLoading ? <span className="spinner" aria-hidden="true" /> : staticPreviewMode ? <ShieldCheck size={16} /> : hasJevCapability ? <Wifi size={16} /> : <KeyRound size={16} />}
               <span>{connectionLabel}</span>
             </button>
             {decisionPresentation === "active" && <>
@@ -842,29 +933,29 @@ export default function TabletApp() {
                 ref={packetTriggerRef}
                 type="button"
                 className="packet-action"
-                data-state={result?.jevTrace ? "success" : "default"}
+                data-state={result?.jevTrace || staticPreviewMode ? "success" : "default"}
                 disabled={!result || loading}
                 aria-haspopup="dialog"
                 aria-expanded={packetDialogOpen}
                 onClick={() => setPacketDialogOpen(true)}
               >
-                <Code2 size={17} /><span>Jev 报文</span>
+                <Code2 size={17} /><span>{staticPreviewMode ? "仿真数据" : "Jev 报文"}</span>
               </button>
               <button
                 type="button"
                 className="refresh-action"
                 data-state={error ? "error" : loading ? "loading" : phase === "ready" ? "success" : "default"}
-                disabled={loading || !canRunJev()}
+                disabled={loading || (!staticPreviewMode && !canRunJev())}
                 onClick={() => void startDecision()}
               >
                 {loading ? <span className="spinner" aria-hidden="true" /> : <RefreshCw size={18} />}
-                <span>{loading ? "处理中" : "刷新决策"}</span>
+                <span>{loading ? "处理中" : staticPreviewMode ? "重新运行" : "刷新决策"}</span>
               </button>
             </>}
           </div>
         </header>
 
-        {decisionPresentation !== "entry" && <WorkflowStrip phase={phase} failedStep={failedStep} receipt={receipt} forecast={forecast} result={result} />}
+        {decisionPresentation !== "entry" && <WorkflowStrip phase={phase} failedStep={failedStep} receipt={receipt} forecast={forecast} result={result} localSimulation={staticPreviewMode} />}
 
         {decisionPresentation === "active" && error && <div className="system-message" data-tone="error" role="alert"><ShieldCheck size={18} /><span>{error} 请重新刷新决策。</span></div>}
         {decisionPresentation === "active" && result?.meta.warning && <div className="system-message" data-tone="warning" role="status"><ShieldCheck size={18} /><span>{result.meta.warning}</span></div>}
@@ -881,8 +972,8 @@ export default function TabletApp() {
               onStart={() => void startDecision()}
             />
           ) : decisionPresentation === "running" || !result || !selected ? (
-            <div className="tablet-loading" aria-label="正在执行量测、预测与决策流程">
-              <div><Gauge size={28} /><strong>{phase === "measuring" ? "正在接收现场量测" : phase === "forecasting" ? "正在生成滚动预测" : "正在计算逐时动作"}</strong><span>系统按顺序完成三个阶段。</span></div>
+            <div className="tablet-loading" aria-label={staticPreviewMode ? "正在执行本地仿真流程" : "正在执行量测、预测与决策流程"}>
+              <div><Gauge size={28} /><strong>{phase === "measuring" ? staticPreviewMode ? "正在载入样本量测" : "正在接收现场量测" : phase === "forecasting" ? staticPreviewMode ? "正在生成预置预测" : "正在生成滚动预测" : staticPreviewMode ? "正在计算本地规则" : "正在计算逐时动作"}</strong><span>{staticPreviewMode ? "本地计算在当前页面完成。" : "系统按顺序完成三个阶段。"}</span></div>
               <i /><i /><i />
             </div>
           ) : (
@@ -898,6 +989,7 @@ export default function TabletApp() {
               scenarioId={scenarioId}
               dirty={dirty}
               loading={loading}
+              localSimulation={staticPreviewMode}
               onSelectHour={setSelectedHour}
               onSelectScenario={selectScenario}
               onUpdateSoc={updateSoc}
@@ -906,7 +998,12 @@ export default function TabletApp() {
           )}
         </main>
       </div>
-      <JevPacketDialog open={packetDialogOpen} result={result} onClose={closePacketDialog} />
+      <JevPacketDialog
+        open={packetDialogOpen}
+        result={result}
+        localSimulation={staticPreviewMode ? { measurement, receipt, forecast } : undefined}
+        onClose={closePacketDialog}
+      />
       <JevConnectionDialog
         open={connectionDialogOpen}
         connection={jevConnection}
@@ -917,6 +1014,10 @@ export default function TabletApp() {
         onClose={closeConnectionDialog}
         onConnect={connectJev}
         onDisconnect={disconnectJev}
+        onStartSimulation={() => {
+          setConnectionDialogOpen(false);
+          void startDecision();
+        }}
       />
     </div>
   );

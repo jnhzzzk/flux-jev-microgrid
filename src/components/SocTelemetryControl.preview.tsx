@@ -42,10 +42,37 @@ function PreviewRow({ state }: { state: SocTelemetryPreviewState }) {
   );
 }
 
+function LocalSimulationRow() {
+  const [mode, setMode] = useState<SocInputMode>("live");
+  const [simulatedSoc, setSimulatedSoc] = useState(58);
+
+  return (
+    <section>
+      <h2>local-simulation</h2>
+      <SocTelemetryControl
+        measuredSocPercent={46}
+        simulatedSocPercent={simulatedSoc}
+        measuredAt="2026-09-23T09:15:24+08:00"
+        mode={mode}
+        minSocPercent={12}
+        maxSocPercent={94}
+        reserveSocPercent={28}
+        capacityKWh={240}
+        maxPowerKW={90}
+        efficiencyPercent={91}
+        localSimulation
+        onModeChange={setMode}
+        onSimulationChange={(value) => setSimulatedSoc(Math.round(value * 100))}
+      />
+    </section>
+  );
+}
+
 export default function SocTelemetryControlPreview() {
   return (
     <main className="soc-telemetry-preview">
       {states.map((state) => <PreviewRow key={state} state={state} />)}
+      <LocalSimulationRow />
     </main>
   );
 }

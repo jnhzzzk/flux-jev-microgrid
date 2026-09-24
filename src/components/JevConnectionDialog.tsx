@@ -43,6 +43,8 @@ export interface JevConnectionDialogProps {
   onClose: () => void;
   onConnect: (apiKey: string) => Promise<void> | void;
   onDisconnect: () => Promise<void> | void;
+  /** Starts the explicitly local, keyless Pages simulation. */
+  onStartSimulation?: () => void;
   previewState?: JevConnectionDialogPreviewState;
   preview?: boolean;
 }
@@ -72,6 +74,7 @@ export function JevConnectionDialog({
   onClose,
   onConnect,
   onDisconnect,
+  onStartSimulation,
   previewState = "default",
   preview = false,
 }: JevConnectionDialogProps) {
@@ -105,7 +108,7 @@ export function JevConnectionDialog({
           return;
         }
         if (staticPreview) {
-          dialog.querySelector<HTMLButtonElement>(".jev-connection-dialog__close")?.focus();
+          dialog.querySelector<HTMLButtonElement>(".jev-connection-dialog__start-simulation")?.focus();
           return;
         }
         inputRef.current?.focus();
@@ -152,17 +155,17 @@ export function JevConnectionDialog({
     <header className="jev-connection-dialog__header">
       <div>
         <span className="jev-connection-dialog__mark" aria-hidden="true">
-          {isConnected ? <CheckCircle2 size={18} /> : <KeyRound size={18} />}
+          {isConnected ? <CheckCircle2 size={18} /> : staticPreview ? <ShieldCheck size={18} /> : <KeyRound size={18} />}
         </span>
         <div>
-          <h2 id={titleId}>{staticPreview ? "Jev API 未部署" : "连接 Jev"}</h2>
-          <p id={descriptionId}>{staticPreview ? "该站点为 GitHub Pages 静态演示版，不能运行应用 API。" : "密钥仅用于本次临时会话；不会写入浏览器存储、运行报文或界面日志。"}</p>
+          <h2 id={titleId}>{staticPreview ? "本地仿真模式" : "连接 Jev"}</h2>
+          <p id={descriptionId}>{staticPreview ? "无需 Jev API Key；在当前设备使用预置样本推演。" : "密钥仅用于本次临时会话；不会写入浏览器存储、运行报文或界面日志。"}</p>
         </div>
       </div>
       <button
         type="button"
         className="jev-connection-dialog__close"
-        aria-label="关闭 Jev 连接"
+        aria-label={staticPreview ? "关闭本地仿真说明" : "关闭 Jev 连接"}
         disabled={isLoading || isDisabled}
         onClick={onClose}
       >
@@ -243,15 +246,17 @@ export function JevConnectionDialog({
   );
 
   const staticBody = (
-    <section className="jev-connection-dialog__form" aria-label="静态演示版说明">
+    <section className="jev-connection-dialog__form" aria-label="本地仿真说明">
       <div className="jev-connection-dialog__security-note">
         <LockKeyhole size={17} aria-hidden="true" />
-        <span>为避免把 Key 发送到错误位置，此版本没有输入框，也不会接收、保存或传输 Jev API Key。</span>
+        <span>此版本没有 Key 输入框，不会接收、保存或传输 Jev API Key。</span>
       </div>
-      <p className="jev-connection-dialog__helper">真实逐时决策需要将本项目的 API 服务部署到具备 Node 运行时的受信任平台，并把密钥仅写入该平台的环境变量。</p>
+      <p className="jev-connection-dialog__helper">本地仿真使用预置量测与预测样本，以及确定性 SOC、功率和需量约束。不会调用 Jev、外部接口或现场设备，也不会发送数据。</p>
       <footer className="jev-connection-dialog__actions">
-        <span><ShieldCheck size={16} aria-hidden="true" />未连接 Jev</span>
-        <button type="button" onClick={onClose}><span>知道了</span></button>
+        <span><ShieldCheck size={16} aria-hidden="true" />无需 Key</span>
+        <button type="button" className="jev-connection-dialog__start-simulation" onClick={onStartSimulation ?? onClose}>
+          <span>开始本地仿真</span>
+        </button>
       </footer>
     </section>
   );

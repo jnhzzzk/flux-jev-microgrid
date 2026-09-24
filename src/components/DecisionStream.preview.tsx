@@ -48,6 +48,20 @@ export function DecisionStreamPreview() {
           />
         </section>
       ))}
+      <section>
+        <h2>local-simulation</h2>
+        <DecisionStream
+          decision={previewDecision}
+          selectedHour={18}
+          generatedAt="2026-09-23T18:00:00+08:00"
+          measuredLoadKW={322}
+          measuredSolarKW={7}
+          measuredSocPercent={46}
+          predictedDemandKW={258}
+          localSimulation
+          onAdvance={() => undefined}
+        />
+      </section>
     </main>
   );
 }
