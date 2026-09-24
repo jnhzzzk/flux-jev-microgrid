@@ -1,0 +1,14 @@
+{
+  "scanned_at": "2026-09-23",
+  "framework": "React 19 + Vite 7",
+  "font_stack": "Geist, IBM Plex Sans, PingFang SC, sans-serif",
+  "palette": "Deep Ocean Electric OKLCH custom properties in tokens.css",
+  "motion": "motion-cut; no motion library installed",
+  "spacing": "Named --space-* four-point scale in tokens.css",
+  "design_md": false,
+  "source_mtimes": {
+    "package.json": "2026-09-22T09:14:03+08:00",
+    "tokens.css": "2026-09-23",
+    "src/ipad.css": "2026-09-23"
+  }
+}

@@ -1,0 +1,520 @@
+{
+  "schedule": [
+    {
+      "hour": 0,
+      "label": "00:00",
+      "loadKW": 76,
+      "solarKW": 0,
+      "netLoadKW": 76,
+      "tariffCnyPerKWh": 0.31,
+      "action": "charge",
+      "batteryPowerKW": -78.12,
+      "gridPowerKW": 154.12,
+      "socBefore": 46,
+      "socAfter": 77.1,
+      "confidence": 0.7,
+      "probabilities": {
+        "charge": 0.8,
+        "hold": 0.1,
+        "discharge": 0.1
+      },
+      "rationale": "处于当日低价时段，为后续高价窗口预充"
+    },
+    {
+      "hour": 1,
+      "label": "01:00",
+      "loadKW": 72,
+      "solarKW": 0,
+      "netLoadKW": 72,
+      "tariffCnyPerKWh": 0.31,
+      "action": "charge",
+      "batteryPowerKW": -42.64,
+      "gridPowerKW": 114.64,
+      "socBefore": 77.1,
+      "socAfter": 94,
+      "confidence": 0.88,
+      "probabilities": {
+        "charge": 0.92,
+        "hold": 0.06,
+        "discharge": 0.02
+      },
+      "rationale": "处于当日低价时段，为后续高价窗口预充",
+      "constraint": "达到 SOC 上限"
+    },
+    {
+      "hour": 2,
+      "label": "02:00",
+      "loadKW": 69,
+      "solarKW": 0,
+      "netLoadKW": 69,
+      "tariffCnyPerKWh": 0.31,
+      "action": "charge",
+      "batteryPowerKW": 0,
+      "gridPowerKW": 69,
+      "socBefore": 94,
+      "socAfter": 94,
+      "confidence": 0.86,
+      "probabilities": {
+        "charge": 0.9,
+        "hold": 0.08,
+        "discharge": 0.02
+      },
+      "rationale": "处于当日低价时段，为后续高价窗口预充",
+      "constraint": "达到 SOC 上限"
+    },
+    {
+      "hour": 3,
+      "label": "03:00",
+      "loadKW": 68,
+      "solarKW": 0,
+      "netLoadKW": 68,
+      "tariffCnyPerKWh": 0.31,
+      "action": "charge",
+      "batteryPowerKW": 0,
+      "gridPowerKW": 68,
+      "socBefore": 94,
+      "socAfter": 94,
+      "confidence": 0.84,
+      "probabilities": {
+        "charge": 0.89,
+        "hold": 0.09,
+        "discharge": 0.02
+      },
+      "rationale": "处于当日低价时段，为后续高价窗口预充",
+      "constraint": "达到 SOC 上限"
+    },
+    {
+      "hour": 4,
+      "label": "04:00",
+      "loadKW": 70,
+      "solarKW": 0,
+      "netLoadKW": 70,
+      "tariffCnyPerKWh": 0.31,
+      "action": "charge",
+      "batteryPowerKW": 0,
+      "gridPowerKW": 70,
+      "socBefore": 94,
+      "socAfter": 94,
+      "confidence": 0.67,
+      "probabilities": {
+        "charge": 0.78,
+        "hold": 0.19,
+        "discharge": 0.03
+      },
+      "rationale": "处于当日低价时段，为后续高价窗口预充",
+      "constraint": "达到 SOC 上限"
+    },
+    {
+      "hour": 5,
+      "label": "05:00",
+      "loadKW": 82,
+      "solarKW": 4,
+      "netLoadKW": 78,
+      "tariffCnyPerKWh": 0.34,
+      "action": "hold",
+      "batteryPowerKW": 0,
+      "gridPowerKW": 78,
+      "socBefore": 94,
+      "socAfter": 94,
+      "confidence": 0.39,
+      "probabilities": {
+        "charge": 0.26,
+        "hold": 0.6,
+        "discharge": 0.14
+      },
+      "rationale": "当前充放电收益有限，保留能量等待更优窗口"
+    },
+    {
+      "hour": 6,
+      "label": "06:00",
+      "loadKW": 108,
+      "solarKW": 20,
+      "netLoadKW": 88,
+      "tariffCnyPerKWh": 0.42,
+      "action": "hold",
+      "batteryPowerKW": 0,
+      "gridPowerKW": 88,
+      "socBefore": 94,
+      "socAfter": 94,
+      "confidence": 0.41,
+      "probabilities": {
+        "charge": 0.16,
+        "hold": 0.61,
+        "discharge": 0.23
+      },
+      "rationale": "当前充放电收益有限，保留能量等待更优窗口"
+    },
+    {
+      "hour": 7,
+      "label": "07:00",
+      "loadKW": 148,
+      "solarKW": 55,
+      "netLoadKW": 93,
+      "tariffCnyPerKWh": 0.68,
+      "action": "hold",
+      "batteryPowerKW": 0,
+      "gridPowerKW": 93,
+      "socBefore": 94,
+      "socAfter": 94,
+      "confidence": 0.26,
+      "probabilities": {
+        "charge": 0.13,
+        "hold": 0.5,
+        "discharge": 0.37
+      },
+      "rationale": "当前充放电收益有限，保留能量等待更优窗口"
+    },
+    {
+      "hour": 8,
+      "label": "08:00",
+      "loadKW": 172,
+      "solarKW": 98,
+      "netLoadKW": 74,
+      "tariffCnyPerKWh": 0.78,
+      "action": "hold",
+      "batteryPowerKW": 0,
+      "gridPowerKW": 74,
+      "socBefore": 94,
+      "socAfter": 94,
+      "confidence": 0.21,
+      "probabilities": {
+        "charge": 0.21,
+        "hold": 0.48,
+        "discharge": 0.31
+      },
+      "rationale": "当前充放电收益有限，保留能量等待更优窗口"
+    },
+    {
+      "hour": 9,
+      "label": "09:00",
+      "loadKW": 166,
+      "solarKW": 142,
+      "netLoadKW": 24,
+      "tariffCnyPerKWh": 0.78,
+      "action": "hold",
+      "batteryPowerKW": 0,
+      "gridPowerKW": 24,
+      "socBefore": 94,
+      "socAfter": 94,
+      "confidence": 0.18,
+      "probabilities": {
+        "charge": 0.44,
+        "hold": 0.45,
+        "discharge": 0.11
+      },
+      "rationale": "当前充放电收益有限，保留能量等待更优窗口"
+    },
+    {
+      "hour": 10,
+      "label": "10:00",
+      "loadKW": 154,
+      "solarKW": 181,
+      "netLoadKW": -27,
+      "tariffCnyPerKWh": 0.56,
+      "action": "charge",
+      "batteryPowerKW": 0,
+      "gridPowerKW": -27,
+      "socBefore": 94,
+      "socAfter": 94,
+      "confidence": 0.87,
+      "probabilities": {
+        "charge": 0.91,
+        "hold": 0.08,
+        "discharge": 0.01
+      },
+      "rationale": "光伏出力超过负荷，优先吸收本地富余绿电",
+      "constraint": "达到 SOC 上限"
+    },
+    {
+      "hour": 11,
+      "label": "11:00",
+      "loadKW": 149,
+      "solarKW": 205,
+      "netLoadKW": -56,
+      "tariffCnyPerKWh": 0.52,
+      "action": "charge",
+      "batteryPowerKW": 0,
+      "gridPowerKW": -56,
+      "socBefore": 94,
+      "socAfter": 94,
+      "confidence": 0.93,
+      "probabilities": {
+        "charge": 0.96,
+        "hold": 0.04,
+        "discharge": 0
+      },
+      "rationale": "光伏出力超过负荷，优先吸收本地富余绿电",
+      "constraint": "达到 SOC 上限"
+    },
+    {
+      "hour": 12,
+      "label": "12:00",
+      "loadKW": 152,
+      "solarKW": 218,
+      "netLoadKW": -66,
+      "tariffCnyPerKWh": 0.52,
+      "action": "charge",
+      "batteryPowerKW": 0,
+      "gridPowerKW": -66,
+      "socBefore": 94,
+      "socAfter": 94,
+      "confidence": 0.94,
+      "probabilities": {
+        "charge": 0.95,
+        "hold": 0.04,
+        "discharge": 0.01
+      },
+      "rationale": "光伏出力超过负荷，优先吸收本地富余绿电",
+      "constraint": "达到 SOC 上限"
+    },
+    {
+      "hour": 13,
+      "label": "13:00",
+      "loadKW": 148,
+      "solarKW": 210,
+      "netLoadKW": -62,
+      "tariffCnyPerKWh": 0.52,
+      "action": "charge",
+      "batteryPowerKW": 0,
+      "gridPowerKW": -62,
+      "socBefore": 94,
+      "socAfter": 94,
+      "confidence": 0.89,
+      "probabilities": {
+        "charge": 0.92,
+        "hold": 0.07,
+        "discharge": 0.01
+      },
+      "rationale": "光伏出力超过负荷，优先吸收本地富余绿电",
+      "constraint": "达到 SOC 上限"
+    },
+    {
+      "hour": 14,
+      "label": "14:00",
+      "loadKW": 151,
+      "solarKW": 184,
+      "netLoadKW": -33,
+      "tariffCnyPerKWh": 0.56,
+      "action": "charge",
+      "batteryPowerKW": 0,
+      "gridPowerKW": -33,
+      "socBefore": 94,
+      "socAfter": 94,
+      "confidence": 0.64,
+      "probabilities": {
+        "charge": 0.76,
+        "hold": 0.19,
+        "discharge": 0.05
+      },
+      "rationale": "光伏出力超过负荷，优先吸收本地富余绿电",
+      "constraint": "达到 SOC 上限"
+    },
+    {
+      "hour": 15,
+      "label": "15:00",
+      "loadKW": 160,
+      "solarKW": 143,
+      "netLoadKW": 17,
+      "tariffCnyPerKWh": 0.62,
+      "action": "hold",
+      "batteryPowerKW": 0,
+      "gridPowerKW": 17,
+      "socBefore": 94,
+      "socAfter": 94,
+      "confidence": 0.29,
+      "probabilities": {
+        "charge": 0.33,
+        "hold": 0.53,
+        "discharge": 0.14
+      },
+      "rationale": "当前充放电收益有限，保留能量等待更优窗口"
+    },
+    {
+      "hour": 16,
+      "label": "16:00",
+      "loadKW": 178,
+      "solarKW": 92,
+      "netLoadKW": 86,
+      "tariffCnyPerKWh": 0.76,
+      "action": "hold",
+      "batteryPowerKW": 0,
+      "gridPowerKW": 86,
+      "socBefore": 94,
+      "socAfter": 94,
+      "confidence": 0.13,
+      "probabilities": {
+        "charge": 0.2,
+        "hold": 0.42,
+        "discharge": 0.38
+      },
+      "rationale": "当前充放电收益有限，保留能量等待更优窗口"
+    },
+    {
+      "hour": 17,
+      "label": "17:00",
+      "loadKW": 212,
+      "solarKW": 41,
+      "netLoadKW": 171,
+      "tariffCnyPerKWh": 0.92,
+      "action": "discharge",
+      "batteryPowerKW": 69.21,
+      "gridPowerKW": 101.79,
+      "socBefore": 94,
+      "socAfter": 63.8,
+      "confidence": 0.48,
+      "probabilities": {
+        "charge": 0.06,
+        "hold": 0.29,
+        "discharge": 0.65
+      },
+      "rationale": "处于高价窗口，放电降低购电成本"
+    },
+    {
+      "hour": 18,
+      "label": "18:00",
+      "loadKW": 236,
+      "solarKW": 10,
+      "netLoadKW": 226,
+      "tariffCnyPerKWh": 1.18,
+      "action": "discharge",
+      "batteryPowerKW": 79.9,
+      "gridPowerKW": 146.1,
+      "socBefore": 63.8,
+      "socAfter": 28.9,
+      "confidence": 0.75,
+      "probabilities": {
+        "charge": 0.01,
+        "hold": 0.16,
+        "discharge": 0.83
+      },
+      "rationale": "处于高价窗口，放电降低购电成本"
+    },
+    {
+      "hour": 19,
+      "label": "19:00",
+      "loadKW": 248,
+      "solarKW": 0,
+      "netLoadKW": 248,
+      "tariffCnyPerKWh": 1.18,
+      "action": "discharge",
+      "batteryPowerKW": 38.62,
+      "gridPowerKW": 209.38,
+      "socBefore": 28.9,
+      "socAfter": 12,
+      "confidence": 0.79,
+      "probabilities": {
+        "charge": 0.01,
+        "hold": 0.13,
+        "discharge": 0.86
+      },
+      "rationale": "处于高价窗口，放电降低购电成本",
+      "constraint": "达到最低 SOC"
+    },
+    {
+      "hour": 20,
+      "label": "20:00",
+      "loadKW": 231,
+      "solarKW": 0,
+      "netLoadKW": 231,
+      "tariffCnyPerKWh": 1.18,
+      "action": "discharge",
+      "batteryPowerKW": 0,
+      "gridPowerKW": 231,
+      "socBefore": 12,
+      "socAfter": 12,
+      "confidence": 0.71,
+      "probabilities": {
+        "charge": 0.01,
+        "hold": 0.19,
+        "discharge": 0.8
+      },
+      "rationale": "处于高价窗口，放电降低购电成本",
+      "constraint": "达到最低 SOC"
+    },
+    {
+      "hour": 21,
+      "label": "21:00",
+      "loadKW": 202,
+      "solarKW": 0,
+      "netLoadKW": 202,
+      "tariffCnyPerKWh": 1.05,
+      "action": "discharge",
+      "batteryPowerKW": 0,
+      "gridPowerKW": 202,
+      "socBefore": 12,
+      "socAfter": 12,
+      "confidence": 0.7,
+      "probabilities": {
+        "charge": 0.02,
+        "hold": 0.18,
+        "discharge": 0.8
+      },
+      "rationale": "处于高价窗口，放电降低购电成本",
+      "constraint": "达到最低 SOC"
+    },
+    {
+      "hour": 22,
+      "label": "22:00",
+      "loadKW": 154,
+      "solarKW": 0,
+      "netLoadKW": 154,
+      "tariffCnyPerKWh": 0.72,
+      "action": "discharge",
+      "batteryPowerKW": 0,
+      "gridPowerKW": 154,
+      "socBefore": 12,
+      "socAfter": 12,
+      "confidence": 0.17,
+      "probabilities": {
+        "charge": 0.14,
+        "hold": 0.42,
+        "discharge": 0.44
+      },
+      "rationale": "净负荷偏高，放电用于削减需量峰值",
+      "constraint": "保留备用 SOC"
+    },
+    {
+      "hour": 23,
+      "label": "23:00",
+      "loadKW": 108,
+      "solarKW": 0,
+      "netLoadKW": 108,
+      "tariffCnyPerKWh": 0.42,
+      "action": "hold",
+      "batteryPowerKW": 0,
+      "gridPowerKW": 108,
+      "socBefore": 12,
+      "socAfter": 12,
+      "confidence": 0.32,
+      "probabilities": {
+        "charge": 0.23,
+        "hold": 0.55,
+        "discharge": 0.22
+      },
+      "rationale": "当前充放电收益有限，保留能量等待更优窗口"
+    }
+  ],
+  "summary": {
+    "operatingCostCny": 1524.46,
+    "baselineCostCny": 1690.55,
+    "savingsCny": 166.09,
+    "savingsPercent": 9.8,
+    "peakImportKW": 231,
+    "baselinePeakKW": 248,
+    "peakReductionPercent": 6.9,
+    "renewableUtilizationPercent": 84.8,
+    "selfSupplyPercent": 40.6,
+    "equivalentCycles": 0.64,
+    "finalSoc": 12
+  },
+  "meta": {
+    "source": "jev",
+    "model": "jev-1.13.0",
+    "generatedAt": "2026-09-22T05:46:04.122Z",
+    "latencyMs": 1648,
+    "inputTokens": 13715,
+    "outputTokens": 975,
+    "measurementId": "m-4f4d088f-88ea-4526-8cd6-4a3c92ca7035",
+    "forecastId": "fc-20260922054602"
+  }
+}

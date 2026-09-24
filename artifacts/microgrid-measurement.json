@@ -1,0 +1,12 @@
+{
+  "siteId": "binhai-microgrid",
+  "measuredAt": "2026-09-22T05:46:02.389Z",
+  "sequence": 1790055962,
+  "values": {
+    "loadKW": 149,
+    "solarKW": 205,
+    "gridPowerKW": -56,
+    "batteryPowerKW": 0,
+    "batterySocPercent": 46
+  }
+}
