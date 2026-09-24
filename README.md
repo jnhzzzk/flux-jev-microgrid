@@ -93,17 +93,13 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'
 
 公开 BYOK 部署不需要、也不应设置 `TYPESAFE_API_KEY`。如果要做仅自己可用的受管 Key 演示，请先开启 Vercel Deployment Protection / 应用身份认证，再把**已轮换的新 Key**以 Secret 写入 `TYPESAFE_API_KEY`，并显式设置 `JEV_ALLOW_ENVIRONMENT_KEY=true`。不要把曾在聊天、截图或代码中出现过的 Key 作为长期生产凭据。
 
-## GitHub Pages 发布（可选）
+## GitHub Pages 静态演示版
 
-仓库包含 [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)。它只构建并发布 Vite 的 `dist` 静态产物；不会向 GitHub Actions、Pages 或前端 bundle 注入 `TYPESAFE_API_KEY`、Jev Key 或会话令牌。
+仓库包含 [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)，它会发布界面与操作流的静态预览。GitHub Pages 没有 Node 运行时，因此该版本**不能**运行 `/api`、接收 Jev Key、采集量测或生成真实充放电结果；界面会明确保持在未连接的启动状态，不会伪造结果。
 
-首次发布前：
+工作流不需要任何 Actions Secret 或 Variable，也不会向 GitHub Actions、Pages 或前端 bundle 注入 `TYPESAFE_API_KEY`、Jev Key、会话令牌或 `VITE_API_BASE_URL`。在仓库 **Settings → Pages** 选择 **GitHub Actions** 作为 Source 后，推送 `main` 即可发布到 `https://<owner>.github.io/<repository>/`。
 
-1. 在仓库 **Settings → Secrets and variables → Actions → Variables** 创建 `JEV_API_BASE_URL`，值为上述 Vercel 项目的公开 HTTPS 地址。这是公开地址，不是密钥；工作流会将其映射到构建时的 `VITE_API_BASE_URL`。
-2. 在 Vercel 额外将 `CORS_ALLOWED_ORIGINS` 精确设为 `https://<owner>.github.io`。注意 Origin 不包含项目站点的仓库路径；同域 Vercel 页面不需要此变量。
-3. 在仓库 **Settings → Pages** 选择 **GitHub Actions** 作为 Source，然后推送 `main`。工作流通过 Pages 提供的 base path 自动构建项目站点，例如 `https://<owner>.github.io/<repository>/`。
-
-如果未设置 `JEV_API_BASE_URL` 或地址不是 HTTPS，工作流会在上传前失败，而不是发布一个会把 Jev 请求错误发往 GitHub Pages 的页面。
+若需要可运行的 Jev 决策，请部署同域 Node API（推荐 Vercel）或受信任的独立 API 服务；密钥只能写入该服务的环境变量，不能写入 GitHub Pages、GitHub Actions Variable 或任何 `VITE_` 变量。
 
 ## 报文样例
 

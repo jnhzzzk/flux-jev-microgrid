@@ -83,6 +83,7 @@ function FluxMark() {
 }
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
+const staticPreviewMode = import.meta.env.VITE_STATIC_PREVIEW === "true";
 
 class ApiRequestError extends Error {
   constructor(
@@ -496,7 +497,7 @@ export default function TabletApp() {
   const connectionTokenRef = useRef<string | null>(null);
 
   function canRunJev() {
-    return Boolean(connectionTokenRef.current) || Boolean(status?.jevConfigured);
+    return !staticPreviewMode && (Boolean(connectionTokenRef.current) || Boolean(status?.jevConfigured));
   }
 
   function clearBrowserConnection() {
@@ -586,6 +587,11 @@ export default function TabletApp() {
   }
 
   async function startDecision(nextScenario = scenario): Promise<boolean> {
+    if (staticPreviewMode) {
+      setConnectionError(null);
+      setConnectionDialogOpen(true);
+      return false;
+    }
     if (!canRunJev()) {
       setConnectionError("请先连接 Jev，再开始首轮逐时决策。");
       setConnectionDialogOpen(true);
@@ -603,6 +609,12 @@ export default function TabletApp() {
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
+    if (staticPreviewMode) {
+      setStatus({ ready: false, jevConfigured: false, defaultModel: "jev-latest" });
+      setStatusError(null);
+      setStatusChecked(true);
+      return;
+    }
     void requestJson<ServiceStatus>("/api/status")
       .then((serviceStatus) => {
         setStatus(serviceStatus);
@@ -644,6 +656,13 @@ export default function TabletApp() {
   }
 
   async function refreshServiceStatus(sessionToken = connectionTokenRef.current) {
+    if (staticPreviewMode) {
+      const previewStatus: ServiceStatus = { ready: false, jevConfigured: false, defaultModel: "jev-latest" };
+      setStatus(previewStatus);
+      setStatusChecked(true);
+      setStatusError(null);
+      return previewStatus;
+    }
     const nextStatus = await requestJson<ServiceStatus>("/api/status", {
       sessionToken,
       onSessionTokenRenewed: (renewedToken) => acceptRenewedSessionToken(sessionToken, renewedToken),
@@ -662,6 +681,12 @@ export default function TabletApp() {
   }
 
   async function connectJev(apiKey: string) {
+    if (staticPreviewMode) {
+      // This is only defensive: the static dialog intentionally has no field.
+      void apiKey;
+      setConnectionError("静态演示版未部署 Jev API，因此不会接收 API Key。");
+      return;
+    }
     setConnectionLoading(true);
     setConnectionError(null);
     let createdSessionToken: string | null = null;
@@ -752,7 +777,7 @@ export default function TabletApp() {
   }
 
   const hasBrowserJevSession = Boolean(jevConnection);
-  const hasManagedJev = !hasBrowserJevSession && (
+  const hasManagedJev = !staticPreviewMode && !hasBrowserJevSession && (
     status?.jevSession?.source === "environment"
     || (Boolean(status?.jevConfigured) && !status?.jevSession)
   );
@@ -766,16 +791,20 @@ export default function TabletApp() {
       : hasJevCapability
         ? "ready"
         : "connect";
-  const siteMeasurementLabel = decisionPresentation === "entry"
+  const siteMeasurementLabel = staticPreviewMode
+    ? "静态界面预览"
+    : decisionPresentation === "entry"
     ? !statusChecked
       ? "正在确认 Jev"
       : hasJevCapability
         ? "等待开始逐时决策"
         : "等待 Jev 连接"
     : formatAge(receipt?.measuredAt, now);
-  const siteConnectionState = !statusChecked ? "checking" : hasJevCapability ? "ready" : "waiting";
+  const siteConnectionState = staticPreviewMode ? "waiting" : !statusChecked ? "checking" : hasJevCapability ? "ready" : "waiting";
   const connectionLabel = connectionLoading
     ? "处理中"
+    : staticPreviewMode
+      ? "API 未部署"
     : hasBrowserJevSession
       ? "Jev 已连接"
       : hasManagedJev
@@ -800,7 +829,7 @@ export default function TabletApp() {
               className="connection-action"
               data-state={connectionLoading ? "loading" : hasBrowserJevSession || hasManagedJev ? "success" : "default"}
               disabled={connectionLoading}
-              aria-label="管理 Jev 连接"
+              aria-label={staticPreviewMode ? "查看 Jev API 部署说明" : "管理 Jev 连接"}
               aria-haspopup="dialog"
               aria-expanded={connectionDialogOpen}
               onClick={openConnectionDialog}
@@ -847,6 +876,7 @@ export default function TabletApp() {
               source={startupSource}
               loading={connectionLoading}
               error={startupError}
+              staticPreview={staticPreviewMode}
               onConnect={openConnectionDialog}
               onStart={() => void startDecision()}
             />
@@ -883,6 +913,7 @@ export default function TabletApp() {
         serverConfigured={hasManagedJev}
         loading={connectionLoading}
         error={connectionError}
+        staticPreview={staticPreviewMode}
         onClose={closeConnectionDialog}
         onConnect={connectJev}
         onDisconnect={disconnectJev}

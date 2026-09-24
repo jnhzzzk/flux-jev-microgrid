@@ -1,4 +1,4 @@
-name: Deploy GitHub Pages
+name: Deploy static GitHub Pages demo
 
 on:
   push:
@@ -30,25 +30,10 @@ jobs:
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
       - name: Install dependencies
         run: npm ci
-      - name: Verify public API endpoint
-        env:
-          VITE_API_BASE_URL: ${{ vars.JEV_API_BASE_URL }}
-        run: |
-          if [ -z "$VITE_API_BASE_URL" ]; then
-            echo "::error title=Missing JEV_API_BASE_URL::Set the repository Actions variable JEV_API_BASE_URL to the public HTTPS API origin before deploying Pages."
-            exit 1
-          fi
-          case "$VITE_API_BASE_URL" in
-            https://*) ;;
-            *)
-              echo "::error title=Invalid JEV_API_BASE_URL::The API origin must use HTTPS."
-              exit 1
-              ;;
-          esac
-      - name: Build static frontend
+      - name: Build static interface preview
         env:
           VITE_BASE_PATH: ${{ steps.pages.outputs.base_path }}/
-          VITE_API_BASE_URL: ${{ vars.JEV_API_BASE_URL }}
+          VITE_STATIC_PREVIEW: "true"
         run: npm run build
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5

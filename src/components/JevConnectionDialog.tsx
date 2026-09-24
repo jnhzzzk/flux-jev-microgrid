@@ -38,6 +38,8 @@ export interface JevConnectionDialogProps {
   serverConfigured: boolean;
   loading: boolean;
   error: string | null;
+  /** A Pages-hosted interface preview that intentionally has no API runtime. */
+  staticPreview?: boolean;
   onClose: () => void;
   onConnect: (apiKey: string) => Promise<void> | void;
   onDisconnect: () => Promise<void> | void;
@@ -66,6 +68,7 @@ export function JevConnectionDialog({
   serverConfigured,
   loading,
   error,
+  staticPreview = false,
   onClose,
   onConnect,
   onDisconnect,
@@ -101,11 +104,15 @@ export function JevConnectionDialog({
           dialog.querySelector<HTMLButtonElement>(".jev-connection-dialog__disconnect")?.focus();
           return;
         }
+        if (staticPreview) {
+          dialog.querySelector<HTMLButtonElement>(".jev-connection-dialog__close")?.focus();
+          return;
+        }
         inputRef.current?.focus();
       });
     }
     if (!open && dialog.open) dialog.close();
-  }, [connection, open, preview]);
+  }, [connection, open, preview, staticPreview]);
 
   useEffect(() => {
     if (!open) {
@@ -148,8 +155,8 @@ export function JevConnectionDialog({
           {isConnected ? <CheckCircle2 size={18} /> : <KeyRound size={18} />}
         </span>
         <div>
-          <h2 id={titleId}>连接 Jev</h2>
-          <p id={descriptionId}>密钥仅用于本次临时会话；不会写入浏览器存储、运行报文或界面日志。</p>
+          <h2 id={titleId}>{staticPreview ? "Jev API 未部署" : "连接 Jev"}</h2>
+          <p id={descriptionId}>{staticPreview ? "该站点为 GitHub Pages 静态演示版，不能运行应用 API。" : "密钥仅用于本次临时会话；不会写入浏览器存储、运行报文或界面日志。"}</p>
         </div>
       </div>
       <button
@@ -235,10 +242,24 @@ export function JevConnectionDialog({
     </form>
   );
 
+  const staticBody = (
+    <section className="jev-connection-dialog__form" aria-label="静态演示版说明">
+      <div className="jev-connection-dialog__security-note">
+        <LockKeyhole size={17} aria-hidden="true" />
+        <span>为避免把 Key 发送到错误位置，此版本没有输入框，也不会接收、保存或传输 Jev API Key。</span>
+      </div>
+      <p className="jev-connection-dialog__helper">真实逐时决策需要将本项目的 API 服务部署到具备 Node 运行时的受信任平台，并把密钥仅写入该平台的环境变量。</p>
+      <footer className="jev-connection-dialog__actions">
+        <span><ShieldCheck size={16} aria-hidden="true" />未连接 Jev</span>
+        <button type="button" onClick={onClose}><span>知道了</span></button>
+      </footer>
+    </section>
+  );
+
   const content = (
     <div className="jev-connection-dialog__surface">
       {header}
-      {isConnected ? connectedBody : formBody}
+      {staticPreview ? staticBody : isConnected ? connectedBody : formBody}
     </div>
   );
 

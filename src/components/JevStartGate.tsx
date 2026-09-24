@@ -26,6 +26,8 @@ export interface JevStartGateProps {
   source?: "session" | "environment";
   loading?: boolean;
   error?: string | null;
+  /** A Pages-hosted interface preview that intentionally has no API runtime. */
+  staticPreview?: boolean;
   onConnect: () => void;
   onStart: () => void;
   preview?: boolean;
@@ -72,6 +74,7 @@ export function JevStartGate({
   source,
   loading = false,
   error,
+  staticPreview = false,
   onConnect,
   onStart,
   preview = false,
@@ -81,6 +84,7 @@ export function JevStartGate({
   const isPreviewError = previewState === "error";
   const isPreviewDisabled = previewState === "disabled";
   const isPreviewSuccess = previewState === "success";
+  const isStaticPreview = staticPreview && !preview;
   const effectiveMode: JevStartGateMode = isPreviewLoading
     ? "checking"
     : isPreviewError
@@ -90,23 +94,28 @@ export function JevStartGate({
         : mode;
   const isReady = effectiveMode === "ready";
   const isLoading = loading || isPreviewLoading || effectiveMode === "checking";
-  const isDisabled = isPreviewDisabled || isLoading;
-  const copy = copyFor(effectiveMode, source);
+  const isDisabled = isPreviewDisabled || isLoading || isStaticPreview;
+  const copy = isStaticPreview
+    ? {
+        title: "静态界面预览已就绪",
+        description: "此 GitHub Pages 站点只展示操作流程与界面状态；未部署 Jev API，因此不会采集量测、生成预测或伪造充放电结果。",
+      }
+    : copyFor(effectiveMode, source);
   const displayedError = isPreviewError ? "连接状态暂时不可用。请重新打开 Jev 连接入口。" : error;
-  const canStart = isReady || (effectiveMode === "error" && source !== undefined);
-  const activeStep = canStart ? 1 : 0;
+  const canStart = !isStaticPreview && (isReady || (effectiveMode === "error" && source !== undefined));
+  const activeStep = isStaticPreview ? -1 : canStart ? 1 : 0;
 
   const content = (
     <div className="jev-start-gate__surface">
       <div className="jev-start-gate__copy">
         <span className="jev-start-gate__mark" aria-hidden="true">
-          {effectiveMode === "error" ? <TriangleAlert size={23} /> : isReady ? <CheckCircle2 size={23} /> : isLoading ? <LoaderCircle size={23} className="spinner" /> : <KeyRound size={23} />}
+          {isStaticPreview ? <ShieldCheck size={23} /> : effectiveMode === "error" ? <TriangleAlert size={23} /> : isReady ? <CheckCircle2 size={23} /> : isLoading ? <LoaderCircle size={23} className="spinner" /> : <KeyRound size={23} />}
         </span>
         <div>
           <h1>{copy.title}</h1>
           <p>{copy.description}</p>
         </div>
-        {displayedError && <p className="jev-start-gate__error" role="alert"><TriangleAlert size={16} />{displayedError}</p>}
+        {!isStaticPreview && displayedError && <p className="jev-start-gate__error" role="alert"><TriangleAlert size={16} />{displayedError}</p>}
       </div>
 
       <ol className="jev-start-gate__steps" aria-label="逐时决策启动顺序">
@@ -123,15 +132,15 @@ export function JevStartGate({
       </ol>
 
       <footer className="jev-start-gate__footer">
-        <p><ShieldCheck size={16} />未完成连接前，不会采集现场量测、生成预测或展示充放电结果。</p>
+        <p><ShieldCheck size={16} />{isStaticPreview ? "演示版不接收或保存 Jev API Key。" : "未完成连接前，不会采集现场量测、生成预测或展示充放电结果。"}</p>
         <button
           type="button"
-          data-state={isLoading ? "loading" : displayedError && !canStart ? "error" : canStart ? "success" : "default"}
+          data-state={isStaticPreview ? "default" : isLoading ? "loading" : displayedError && !canStart ? "error" : canStart ? "success" : "default"}
           disabled={isDisabled}
           onClick={canStart ? onStart : onConnect}
         >
           {isLoading ? <LoaderCircle size={18} className="spinner" aria-hidden="true" /> : canStart ? <Cpu size={18} /> : <KeyRound size={18} />}
-          <span>{isLoading ? "正在检查连接" : isReady ? "开始逐时决策" : canStart ? "重新开始逐时决策" : displayedError ? "重新连接 Jev" : "连接 Jev"}</span>
+          <span>{isStaticPreview ? "需要部署 API" : isLoading ? "正在检查连接" : isReady ? "开始逐时决策" : canStart ? "重新开始逐时决策" : displayedError ? "重新连接 Jev" : "连接 Jev"}</span>
         </button>
       </footer>
     </div>
